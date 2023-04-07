@@ -1,0 +1,38 @@
+{
+  "name": "@sujeet-pro/reactivity",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "start": "npm run test && npm run build",
+    "prebuild": "npm run clean",
+    "build": "tsc -p tsconfig_build.json",
+    "clean": "node scripts/clean.js",
+    "test": "jest"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sujeet-pro/reactivity.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sujeet-pro/reactivity/issues"
+  },
+  "homepage": "https://github.com/sujeet-pro/reactivity#readme",
+  "devDependencies": {
+    "@jest/globals": "^29.5.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.3"
+  }
+}
