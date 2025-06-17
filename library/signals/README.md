@@ -98,23 +98,23 @@ graph TD
 
 ```mermaid
 graph LR
-    subgraph "Basic Signal"
+    subgraph BasicSignal ["Basic Signal"]
         A[createSignal] --> B[Getter/Setter]
         B --> C[Value Access]
         B --> D[Value Update]
     end
     
-    subgraph "Derived Signal"
+    subgraph DerivedSignal ["Derived Signal"]
         E[createMemo] --> F[Computed Value]
         F --> G[Automatic Updates]
     end
     
-    subgraph "Side Effects"
+    subgraph SideEffects ["Side Effects"]
         H[createEffect] --> I[Reactive Side Effect]
         I --> J[Cleanup Function]
     end
     
-    subgraph "Async Resources"
+    subgraph AsyncResources ["Async Resources"]
         K[createResource] --> L[Async Data]
         L --> M[Loading States]
     end
@@ -599,20 +599,19 @@ createEffect(() => {
 #### 1. Time Complexity
 
 ```mermaid
-graph LR
-    A[Signal Read] --> B[O(1)]
-    C[Signal Write] --> D[O(n)]
-    E[Effect Creation] --> F[O(1)]
-    G[Dependency Tracking] --> H[O(1)]
+graph TD
+    A["Signal Read"] --> B["O(1)"]
+    C["Signal Write"] --> D["O(n)"]
+    E["Effect Creation"] --> F["O(1)"]
+    G["Dependency Tracking"] --> H["O(1)"]
     
-    subgraph "Where n = subscribers"
-        D
-    end
+    I["Where n = subscribers"] -.-> D
     
     style A fill:#99ccff,stroke:#333,color:#000
     style C fill:#ff9999,stroke:#333,color:#000
     style E fill:#99ff99,stroke:#333,color:#000
     style G fill:#ffcc99,stroke:#333,color:#000
+    style I fill:#f0f0f0,stroke:#333,color:#000
 ```
 
 - **Signal read**: O(1)
@@ -644,35 +643,39 @@ graph TD
 
 ```mermaid
 graph LR
-    A[Signal Change] --> B[Notify Subscribers]
-    B --> C[Re-run Effects]
-    C --> D[Update Derived Signals]
-    D --> E[Propagate Changes]
+    A["Signal Change"] --> B["Notify Subscribers"]
+    B --> C["Re-run Effects"]
+    C --> D["Update Derived Signals"]
+    D --> E["Propagate Changes"]
     
-    subgraph "Complexity"
-        A --> F[O(1)]
-        B --> G[O(n)]
-        C --> H[O(m)]
-        D --> I[O(k*p)]
-    end
+    F["O(1)"] -.-> A
+    G["O(n)"] -.-> B
+    H["O(m)"] -.-> C
+    I["O(k*p)"] -.-> D
     
     style A fill:#ff9999,stroke:#333,color:#000
     style B fill:#99ccff,stroke:#333,color:#000
     style C fill:#ffcc99,stroke:#333,color:#000
     style D fill:#99ff99,stroke:#333,color:#000
+    style F fill:#f0f0f0,stroke:#333,color:#000
+    style G fill:#f0f0f0,stroke:#333,color:#000
+    style H fill:#f0f0f0,stroke:#333,color:#000
+    style I fill:#f0f0f0,stroke:#333,color:#000
 ```
 
-```
-Signal Change → Notify Subscribers → Re-run Effects → Update Derived Signals
-     ↓                   ↓                ↓                    ↓
-    O(1)               O(n)            O(m)               O(k*p)
+Signal Change (O(1))
+     ↓
+Notify Subscribers (O(n))
+     ↓
+Re-run Effects (O(m))
+     ↓
+Update Derived Signals (O(k*p))
 
 Where:
 - n = direct subscribers
 - m = average effect complexity  
 - k = derived signals updated
 - p = subscribers per derived signal
-```
 
 ### Memory Management
 
