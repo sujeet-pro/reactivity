@@ -8,7 +8,25 @@ import type {
 } from './types';
 
 /**
- * Create an event emitter with typed events
+ * Create an event emitter with typed events and comprehensive error handling.
+ * This implementation provides a robust foundation for event-driven architectures.
+ * 
+ * @param options - Configuration options for the event emitter
+ * @returns A fully-featured event emitter
+ * 
+ * @example
+ * ```typescript
+ * const events = createEventEmitter<{
+ *   userLogin: { userId: string };
+ *   userLogout: void;
+ * }>();
+ * 
+ * events.on('userLogin', ({ userId }) => {
+ *   console.log(`User ${userId} logged in`);
+ * });
+ * 
+ * events.emit('userLogin', { userId: '123' });
+ * ```
  */
 export function createEventEmitter<TEvents extends Record<string, any> = Record<string, any>>(
   options: PubSubOptions = {}
@@ -16,6 +34,13 @@ export function createEventEmitter<TEvents extends Record<string, any> = Record<
   const { maxListeners = 10, warnOnMaxListeners = true } = options;
   const events = new Map<keyof TEvents, Set<EventHandler>>();
 
+  /**
+   * Get or create the event handler set for a specific event.
+   * This ensures we always have a valid Set for event handlers.
+   * 
+   * @param event - The event key
+   * @returns Set of event handlers for the event
+   */
   function getEventSet<K extends keyof TEvents>(event: K): Set<EventHandler<TEvents[K]>> {
     if (!events.has(event)) {
       events.set(event, new Set());
@@ -23,9 +48,19 @@ export function createEventEmitter<TEvents extends Record<string, any> = Record<
     return events.get(event) as Set<EventHandler<TEvents[K]>>;
   }
 
+  /**
+   * Check if the maximum number of listeners has been exceeded.
+   * This helps prevent memory leaks and provides debugging information.
+   * 
+   * @param event - The event key
+   * @param handlers - The set of handlers for the event
+   */
   function checkMaxListeners<K extends keyof TEvents>(event: K, handlers: Set<EventHandler<TEvents[K]>>) {
     if (warnOnMaxListeners && handlers.size >= maxListeners) {
-      console.warn(`Maximum listeners (${maxListeners}) exceeded for event "${String(event)}"`);
+      console.warn(
+        `Maximum listeners (${maxListeners}) exceeded for event "${String(event)}". ` +
+        `This may indicate a memory leak. Consider removing unused listeners.`
+      );
     }
   }
 
@@ -37,6 +72,7 @@ export function createEventEmitter<TEvents extends Record<string, any> = Record<
       
       return () => {
         handlers.delete(handler);
+        // Clean up empty event sets to prevent memory leaks
         if (handlers.size === 0) {
           events.delete(event);
         }
@@ -47,6 +83,7 @@ export function createEventEmitter<TEvents extends Record<string, any> = Record<
       const handlers = events.get(event);
       if (handlers) {
         handlers.delete(handler);
+        // Clean up empty event sets
         if (handlers.size === 0) {
           events.delete(event);
         }
@@ -62,7 +99,11 @@ export function createEventEmitter<TEvents extends Record<string, any> = Record<
           try {
             handler(data);
           } catch (error) {
-            console.error(`Error in event handler for "${String(event)}":`, error);
+            console.error(
+              `Error in event handler for "${String(event)}":`,
+              error,
+              '\nHandler:', handler.toString()
+            );
           }
         }
       }
@@ -70,8 +111,16 @@ export function createEventEmitter<TEvents extends Record<string, any> = Record<
 
     once<K extends keyof TEvents>(event: K, handler: EventHandler<TEvents[K]>): EventUnsubscriber {
       const onceHandler = (data: TEvents[K]) => {
-        handler(data);
-        this.off(event, onceHandler);
+        try {
+          handler(data);
+        } catch (error) {
+          console.error(
+            `Error in once handler for "${String(event)}":`,
+            error
+          );
+        } finally {
+          this.off(event, onceHandler);
+        }
       };
       
       return this.on(event, onceHandler);
@@ -98,13 +147,28 @@ export function createEventEmitter<TEvents extends Record<string, any> = Record<
 }
 
 /**
- * Create a pub-sub channel for a specific data type
+ * Create a pub-sub channel for a specific data type.
+ * Channels provide a simple way to broadcast data to multiple subscribers.
+ * 
+ * @returns A pub-sub channel with publish/subscribe functionality
+ * 
+ * @example
+ * ```typescript
+ * const userChannel = createChannel<User>();
+ * 
+ * userChannel.subscribe(user => {
+ *   console.log('User updated:', user);
+ * });
+ * 
+ * userChannel.publish({ id: 1, name: 'John' });
+ * ```
  */
 export function createChannel<T = any>(): PubSubChannel<T> {
   const subscribers = new Set<EventHandler<T>>();
 
   return {
     publish(data: T): void {
+      // Create a copy to avoid modification during iteration
       const subscribersCopy = Array.from(subscribers);
       for (const handler of subscribersCopy) {
         try {
@@ -137,7 +201,21 @@ export function createChannel<T = any>(): PubSubChannel<T> {
 }
 
 /**
- * Create a pub-sub hub for managing multiple channels
+ * Create a pub-sub hub for managing multiple channels.
+ * Hubs provide a centralized way to organize and manage multiple channels.
+ * 
+ * @returns A pub-sub hub with channel management capabilities
+ * 
+ * @example
+ * ```typescript
+ * const hub = createPubSubHub();
+ * 
+ * const userChannel = hub.channel<User>('users');
+ * const orderChannel = hub.channel<Order>('orders');
+ * 
+ * userChannel.subscribe(user => console.log('User:', user));
+ * orderChannel.subscribe(order => console.log('Order:', order));
+ * ```
  */
 export function createPubSubHub(): PubSubHub {
   const channels = new Map<string, PubSubChannel<any>>();
@@ -172,7 +250,23 @@ export function createPubSubHub(): PubSubHub {
 }
 
 /**
- * Create a reactive state using pub-sub pattern
+ * Create a reactive state using the pub-sub pattern.
+ * This provides a simple way to create reactive state with automatic change notifications.
+ * 
+ * @param initialValue - The initial value for the state
+ * @returns A reactive state object with get, set, and subscribe methods
+ * 
+ * @example
+ * ```typescript
+ * const counter = createReactiveState(0);
+ * 
+ * counter.subscribe(value => {
+ *   console.log('Counter changed:', value);
+ * });
+ * 
+ * counter.set(5); // Triggers subscription
+ * counter.set(prev => prev + 1); // Functional update
+ * ```
  */
 export function createReactiveState<T>(initialValue: T): {
   get: () => T;
@@ -191,6 +285,7 @@ export function createReactiveState<T>(initialValue: T): {
         ? (value as (current: T) => T)(currentValue)
         : value;
       
+      // Only update if value actually changed
       if (newValue !== currentValue) {
         currentValue = newValue;
         channel.publish(newValue);
@@ -204,7 +299,23 @@ export function createReactiveState<T>(initialValue: T): {
 }
 
 /**
- * Utility to combine multiple reactive states
+ * Utility to combine multiple reactive states into a single reactive object.
+ * This is useful for coordinating multiple pieces of state.
+ * 
+ * @param states - Object containing multiple reactive states
+ * @returns A combined reactive state object
+ * 
+ * @example
+ * ```typescript
+ * const state1 = createReactiveState(1);
+ * const state2 = createReactiveState(2);
+ * 
+ * const combined = combineStates({ state1, state2 });
+ * 
+ * combined.subscribe(({ state1, state2 }) => {
+ *   console.log('Combined state:', state1 + state2);
+ * });
+ * ```
  */
 export function combineStates<T extends Record<string, any>>(
   states: { [K in keyof T]: { get: () => T[K]; subscribe: (handler: EventHandler<T[K]>) => EventUnsubscriber } }
@@ -215,6 +326,9 @@ export function combineStates<T extends Record<string, any>>(
   const channel = createChannel<T>();
   const unsubscribers = new Map<keyof T, EventUnsubscriber>();
 
+  /**
+   * Get the current combined state from all individual states.
+   */
   function getCurrentState(): T {
     const result = {} as T;
     for (const key in states) {

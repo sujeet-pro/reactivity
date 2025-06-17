@@ -18,9 +18,14 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
   "include": [
     "library/**/*",
@@ -30,6 +35,8 @@
   "exclude": [
     "node_modules",
     "dist",
-    "examples/dist"
+    "examples/dist",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

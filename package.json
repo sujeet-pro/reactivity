@@ -1,12 +1,21 @@
 {
   "name": "@sujeet-pro/reactivity",
   "version": "1.0.0",
-  "description": "A comprehensive reactivity library showcasing different reactive patterns including signals, proxy state, pub-sub, and RxJS-style observables",
+  "description": "A comprehensive TypeScript library showcasing different reactive programming patterns including signals, proxy state, pub-sub, and RxJS-style observables with full TypeScript support, comprehensive testing, and performance optimizations.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
-    "/dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "dev": "npm run build:library && npm run dev:examples",
@@ -18,11 +27,19 @@
     "build:examples": "cd examples && npm run build",
     "test": "vitest run --coverage",
     "test:ui": "vitest --ui",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage --reporter=html",
     "clean": "rm -rf dist/ public/index.html",
-    "prepare": "npm run build:library"
+    "clean:all": "npm run clean && rm -rf node_modules examples/node_modules && npm install",
+    "lint": "eslint library/**/*.ts --ext .ts",
+    "lint:fix": "eslint library/**/*.ts --ext .ts --fix",
+    "type-check": "tsc --noEmit",
+    "prepare": "npm run build:library",
+    "prepublishOnly": "npm run test && npm run build:library"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=18",
+    "npm": ">=8"
   },
   "repository": {
     "type": "git",
@@ -35,15 +52,24 @@
     "pub-sub",
     "rxjs",
     "observables",
-    "reactive"
+    "reactive",
+    "typescript",
+    "state-management",
+    "event-driven",
+    "functional-programming"
   ],
-  "author": "Sujeet Kumar",
+  "author": {
+    "name": "Sujeet Kumar",
+    "email": "sujeet@example.com",
+    "url": "https://github.com/sujeet-pro"
+  },
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/sujeet-pro/reactivity/issues"
   },
   "homepage": "https://github.com/sujeet-pro/reactivity#readme",
   "devDependencies": {
+    "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^3.2.3",
     "@vitest/ui": "^3.2.3",
     "typescript": "^5.8.3",
@@ -51,5 +77,8 @@
   },
   "workspaces": [
     "examples"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

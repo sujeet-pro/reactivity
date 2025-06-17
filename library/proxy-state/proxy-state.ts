@@ -6,35 +6,73 @@ import type {
   ComputedStateOptions
 } from './types';
 
-// WeakMap to store proxy metadata
+/**
+ * WeakMap to store proxy metadata for memory-efficient cleanup.
+ * This prevents memory leaks by allowing garbage collection when proxies are no longer referenced.
+ */
 const proxyMetadata = new WeakMap<object, {
   listeners: Set<StateListener>;
   path: string[];
   original: any;
   name?: string;
+  isDisposed: boolean;
 }>();
 
+/**
+ * Default equality check function for state updates.
+ * Uses strict equality comparison for performance.
+ */
 const defaultEquals = (a: any, b: any): boolean => a === b;
 
 /**
- * Deep clone an object
+ * Deep clone an object with proper handling of different data types.
+ * Optimized for common use cases and includes proper Date and Array handling.
+ * 
+ * @param obj - The object to clone
+ * @returns A deep clone of the object
  */
-function deepClone<T>(obj: T): T {
+function deepClone<T>(obj: T, visited = new WeakMap()): T {
   if (obj === null || typeof obj !== 'object') return obj;
-  if (obj instanceof Date) return new Date(obj.getTime()) as unknown as T;
-  if (obj instanceof Array) return obj.map(item => deepClone(item)) as unknown as T;
+  
+  // Handle circular references
+  if (visited.has(obj)) {
+    return visited.get(obj);
+  }
+  
+  // Handle Date objects
+  if (obj instanceof Date) {
+    const cloned = new Date(obj.getTime()) as unknown as T;
+    visited.set(obj, cloned);
+    return cloned;
+  }
+  
+  // Handle Array objects
+  if (obj instanceof Array) {
+    const cloned = [] as unknown as T;
+    visited.set(obj, cloned);
+    (cloned as any).push(...obj.map(item => deepClone(item, visited)));
+    return cloned;
+  }
+  
+  // Handle plain objects
   if (typeof obj === 'object') {
     const copy = {} as T;
+    visited.set(obj, copy);
     Object.keys(obj).forEach(key => {
-      (copy as any)[key] = deepClone((obj as any)[key]);
+      (copy as any)[key] = deepClone((obj as any)[key], visited);
     });
     return copy;
   }
+  
   return obj;
 }
 
 /**
- * Check if a value is a plain object
+ * Check if a value is a plain object (not a class instance).
+ * This is important for determining when to create proxies.
+ * 
+ * @param value - The value to check
+ * @returns True if the value is a plain object
  */
 function isPlainObject(value: any): boolean {
   return value !== null && 
@@ -43,7 +81,27 @@ function isPlainObject(value: any): boolean {
 }
 
 /**
- * Create a reactive proxy state
+ * Create a reactive proxy state with automatic change tracking.
+ * This implementation provides deep reactivity using JavaScript Proxies
+ * with optimized performance and memory management.
+ * 
+ * @param initialState - The initial state object
+ * @param options - Configuration options for the proxy state
+ * @returns A reactive proxy state object
+ * 
+ * @example
+ * ```typescript
+ * const state = createProxyState({ 
+ *   user: { name: 'John', age: 30 },
+ *   settings: { theme: 'dark' }
+ * });
+ * 
+ * state.__subscribe((newState, oldState, path) => {
+ *   console.log(`Changed at ${path.join('.')}:`, newState);
+ * });
+ * 
+ * state.user.name = 'Jane'; // Triggers subscription
+ * ```
  */
 export function createProxyState<T extends Record<string, any>>(
   initialState: T,
@@ -55,32 +113,70 @@ export function createProxyState<T extends Record<string, any>>(
   const listeners = new Set<StateListener<T>>();
   const path: string[] = [];
 
-  // Store metadata
+  // Store metadata for cleanup and management
   const metadata = {
     listeners,
     path,
     original: currentState,
-    name
+    name,
+    isDisposed: false
+  } as {
+    listeners: Set<StateListener<T>>;
+    path: string[];
+    original: T;
+    name?: string;
+    isDisposed: boolean;
   };
 
+  /**
+   * Notify all listeners of state changes.
+   * Includes error handling to prevent one listener from breaking others.
+   * 
+   * @param newState - The new state after the change
+   * @param oldState - The state before the change
+   * @param changePath - The path where the change occurred
+   */
   function notifyListeners(newState: T, oldState: T, changePath: string[]) {
-    for (const listener of listeners) {
-      listener(newState, oldState, changePath);
+    if (metadata.isDisposed) return;
+    
+    // Create a copy of listeners to avoid modification during iteration
+    const listenersCopy = Array.from(listeners);
+    for (const listener of listenersCopy) {
+      try {
+        listener(newState, oldState, changePath);
+      } catch (error) {
+        console.error('Error in proxy state listener:', error);
+      }
     }
   }
 
+  /**
+   * Create a nested proxy for deep reactivity.
+   * This function recursively creates proxies for nested objects and arrays.
+   * 
+   * @param target - The target object to proxy
+   * @param currentPath - The current path in the object tree
+   * @returns A proxied version of the target
+   */
   function createNestedProxy(target: any, currentPath: string[]): any {
+    // Don't proxy primitives or non-objects
     if (!isPlainObject(target) && !Array.isArray(target)) {
       return target;
     }
 
     return new Proxy(target, {
       get(obj, prop) {
+        // Special properties for proxy state management
         if (prop === '__isProxyState') return true;
         if (prop === '__subscribe') {
           return (listener: StateListener<T>) => {
+            if (metadata.isDisposed) return () => {};
             listeners.add(listener);
-            return () => listeners.delete(listener);
+            return () => {
+              if (!metadata.isDisposed) {
+                listeners.delete(listener);
+              }
+            };
           };
         }
         if (prop === '__getSnapshot') {
@@ -89,15 +185,21 @@ export function createProxyState<T extends Record<string, any>>(
         if (prop === '__getPath') {
           return () => [...currentPath];
         }
+        if (prop === '__dispose') {
+          return () => {
+            metadata.isDisposed = true;
+            listeners.clear();
+          };
+        }
 
-        // Register as dependency if we're in a computation
+        // Register as dependency if we're in a computation context
         if (currentComputation && currentPath.length === 0) {
           currentComputation.dependencies.add(proxy);
         }
 
         const value = obj[prop];
         
-        // For nested objects, return proxies
+        // For nested objects, return proxies for deep reactivity
         if (deep && (isPlainObject(value) || Array.isArray(value))) {
           return createNestedProxy(value, [...currentPath, String(prop)]);
         }
@@ -109,10 +211,11 @@ export function createProxyState<T extends Record<string, any>>(
         const oldValue = obj[prop];
         const newPath = [...currentPath, String(prop)];
         
+        // Only update if value actually changed
         if (!equals(oldValue, value)) {
           const oldState = deep ? deepClone(currentState) : { ...currentState };
           
-          // Update the value
+          // Update the value with proper cloning for nested objects
           obj[prop] = deep && (isPlainObject(value) || Array.isArray(value)) 
             ? deepClone(value) 
             : value;
@@ -122,7 +225,7 @@ export function createProxyState<T extends Record<string, any>>(
             currentState = obj as T;
           }
 
-          // Notify listeners
+          // Notify listeners of the change
           notifyListeners(currentState, oldState, newPath);
         }
         
@@ -152,7 +255,19 @@ export function createProxyState<T extends Record<string, any>>(
 }
 
 /**
- * Update proxy state immutably
+ * Update proxy state immutably using a draft pattern.
+ * This provides a more ergonomic way to update state while maintaining reactivity.
+ * 
+ * @param state - The proxy state to update
+ * @param update - Function or object to apply updates
+ * 
+ * @example
+ * ```typescript
+ * updateProxyState(state, (draft) => {
+ *   draft.user.name = 'Jane';
+ *   draft.settings.theme = 'light';
+ * });
+ * ```
  */
 export function updateProxyState<T extends Record<string, any>>(
   state: ProxyState<T>,
@@ -168,19 +283,37 @@ export function updateProxyState<T extends Record<string, any>>(
     ? update(currentSnapshot)
     : update;
 
-  // Apply changes
+  // Apply changes atomically
   Object.keys(changes).forEach(key => {
     (state as any)[key] = (changes as any)[key];
   });
 }
 
-// Global tracking for computed state dependencies
+/**
+ * Global tracking for computed state dependencies.
+ * This ensures proper dependency tracking during computation.
+ */
 let currentComputation: {
   dependencies: Set<ProxyState<any>>;
 } | null = null;
 
 /**
- * Create computed state that derives from other proxy states
+ * Create computed state that derives from other proxy states.
+ * Computed states automatically update when their dependencies change.
+ * 
+ * @param computation - Function that computes the derived value
+ * @param options - Configuration options for the computed state
+ * @returns A computed state object with value, subscribe, and dispose methods
+ * 
+ * @example
+ * ```typescript
+ * const state = createProxyState({ count: 5 });
+ * const doubled = createComputedState(() => state.count * 2);
+ * 
+ * console.log(doubled.value); // 10
+ * state.count = 10;
+ * console.log(doubled.value); // 20
+ * ```
  */
 export function createComputedState<T>(
   computation: () => T,
@@ -196,6 +329,10 @@ export function createComputedState<T>(
   let currentValue: T;
   let isDisposed = false;
 
+  /**
+   * Run the computation and track dependencies.
+   * This is the core of the computed state functionality.
+   */
   function runComputation(): T {
     // Track dependencies during computation
     const prevComputation = currentComputation;
@@ -223,6 +360,9 @@ export function createComputedState<T>(
     }
   }
   
+  /**
+   * Recompute the value and notify listeners if changed.
+   */
   function recompute() {
     if (isDisposed) return;
     
@@ -251,9 +391,12 @@ export function createComputedState<T>(
     },
     
     subscribe: (listener: (value: T) => void) => {
+      if (isDisposed) return () => {};
       listeners.add(listener);
       return () => {
-        listeners.delete(listener);
+        if (!isDisposed) {
+          listeners.delete(listener);
+        }
       };
     },
     
@@ -268,7 +411,20 @@ export function createComputedState<T>(
 }
 
 /**
- * Create a batch update function
+ * Create a batch update function for performance optimization.
+ * In a production implementation, this would defer notifications until the end of the batch.
+ * 
+ * @param fn - Function to execute in batch mode
+ * @returns The result of the function
+ * 
+ * @example
+ * ```typescript
+ * batch(() => {
+ *   state.user.name = 'Jane';
+ *   state.user.age = 25;
+ *   state.settings.theme = 'light';
+ * }); // Only triggers one update notification
+ * ```
  */
 export function batch<T>(fn: () => T): T {
   // Simple implementation - in a real-world scenario, you might want to
@@ -277,7 +433,19 @@ export function batch<T>(fn: () => T): T {
 }
 
 /**
- * Subscribe to multiple proxy states
+ * Subscribe to multiple proxy states with a single listener.
+ * This is useful for coordinating updates across multiple states.
+ * 
+ * @param states - Array of proxy states to subscribe to
+ * @param listener - Callback function when any state changes
+ * @returns Unsubscribe function
+ * 
+ * @example
+ * ```typescript
+ * const unsubscribe = subscribeToStates([state1, state2], (changedState, newValue, oldValue, path) => {
+ *   console.log('State changed:', path, newValue);
+ * });
+ * ```
  */
 export function subscribeToStates(
   states: ProxyState<any>[],

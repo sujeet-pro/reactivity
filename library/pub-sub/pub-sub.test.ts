@@ -137,25 +137,66 @@ describe('Pub-Sub Module', () => {
       expect(emitter.listenerCount('test2')).toBe(1);
     });
 
-    it('should handle errors in event handlers gracefully', () => {
-      const emitter = createEventEmitter<{ test: string }>();
+    it('should handle errors in event handlers', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const errorHandler = vi.fn(() => { throw new Error('Handler error'); });
-      const goodHandler = vi.fn();
+      const emitter = createEventEmitter<{ test: string }>();
+      const handler1 = vi.fn(() => { throw new Error('Handler 1 error'); });
+      const handler2 = vi.fn();
       
-      emitter.on('test', errorHandler);
-      emitter.on('test', goodHandler);
+      emitter.on('test', handler1);
+      emitter.on('test', handler2);
       
       emitter.emit('test', 'hello');
       
-      expect(errorHandler).toHaveBeenCalled();
-      expect(goodHandler).toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Error in event handler'),
-        expect.any(Error)
+        'Error in event handler for "test":',
+        expect.any(Error),
+        '\nHandler:',
+        expect.any(String)
       );
+      expect(handler2).toHaveBeenCalled(); // Second handler still executes
       
       consoleSpy.mockRestore();
+    });
+
+    it('should handle cleanup in once handlers', () => {
+      const emitter = createEventEmitter<{ test: string }>();
+      const cleanup = vi.fn();
+      
+      emitter.once('test', () => {
+        cleanup();
+      });
+      emitter.emit('test', 'hello');
+      emitter.emit('test', 'world');
+      
+      expect(cleanup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle multiple event types', () => {
+      interface Events {
+        userJoined: { id: string; name: string };
+        userLeft: string;
+        messageReceived: { from: string; text: string };
+      }
+      
+      const emitter = createEventEmitter<Events>();
+      const handlers = {
+        userJoined: vi.fn(),
+        userLeft: vi.fn(),
+        messageReceived: vi.fn()
+      };
+      
+      emitter.on('userJoined', handlers.userJoined);
+      emitter.on('userLeft', handlers.userLeft);
+      emitter.on('messageReceived', handlers.messageReceived);
+      
+      emitter.emit('userJoined', { id: '1', name: 'John' });
+      emitter.emit('userLeft', '1');
+      emitter.emit('messageReceived', { from: '2', text: 'Hello' });
+      
+      expect(handlers.userJoined).toHaveBeenCalledWith({ id: '1', name: 'John' });
+      expect(handlers.userLeft).toHaveBeenCalledWith('1');
+      expect(handlers.messageReceived).toHaveBeenCalledWith({ from: '2', text: 'Hello' });
     });
 
     it('should warn when max listeners exceeded', () => {
@@ -253,25 +294,50 @@ describe('Pub-Sub Module', () => {
       expect(handler2).not.toHaveBeenCalled();
     });
 
-    it('should handle errors in subscribers gracefully', () => {
-      const channel = createChannel<string>();
+    it('should handle errors in subscribers', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const errorHandler = vi.fn(() => { throw new Error('Subscriber error'); });
-      const goodHandler = vi.fn();
+      const channel = createChannel<string>();
       
-      channel.subscribe(errorHandler);
-      channel.subscribe(goodHandler);
+      channel.subscribe(() => { throw new Error('Subscriber error'); });
+      const handler2 = vi.fn();
+      channel.subscribe(handler2);
       
-      channel.publish('hello');
+      channel.publish('test');
       
-      expect(errorHandler).toHaveBeenCalled();
-      expect(goodHandler).toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalledWith(
         'Error in channel subscriber:',
         expect.any(Error)
       );
+      expect(handler2).toHaveBeenCalled(); // Second subscriber still executes
       
       consoleSpy.mockRestore();
+    });
+
+    it('should support async subscribers', async () => {
+      const channel = createChannel<string>();
+      const asyncHandler = vi.fn(async (data) => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+        return `processed-${data}`;
+      });
+      
+      channel.subscribe(asyncHandler);
+      channel.publish('test');
+      
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(asyncHandler).toHaveBeenCalledWith('test');
+    });
+
+    it('should maintain subscription order', () => {
+      const channel = createChannel<number>();
+      const results: number[] = [];
+      
+      channel.subscribe(n => results.push(n * 1));
+      channel.subscribe(n => results.push(n * 2));
+      channel.subscribe(n => results.push(n * 3));
+      
+      channel.publish(2);
+      
+      expect(results).toEqual([2, 4, 6]); // Order preserved
     });
   });
 
@@ -306,9 +372,8 @@ describe('Pub-Sub Module', () => {
 
     it('should list channel names', () => {
       const hub = createPubSubHub();
-      
-      hub.channel('channel1');
-      hub.channel('channel2');
+      hub.channel<string>('channel1');
+      hub.channel<number>('channel2');
       
       const names = hub.getChannelNames();
       expect(names).toHaveLength(2);
@@ -351,6 +416,44 @@ describe('Pub-Sub Module', () => {
       channel2.publish('world');
       expect(handler1).not.toHaveBeenCalled();
       expect(handler2).not.toHaveBeenCalled();
+    });
+
+    it('should handle channel type safety', () => {
+      interface Events {
+        userEvent: { id: string; action: string };
+        systemEvent: { code: number; message: string };
+      }
+      
+      const hub = createPubSubHub();
+      const userChannel = hub.channel<Events['userEvent']>('user');
+      const systemChannel = hub.channel<Events['systemEvent']>('system');
+      
+      const userHandler = vi.fn();
+      const systemHandler = vi.fn();
+      
+      userChannel.subscribe(userHandler);
+      systemChannel.subscribe(systemHandler);
+      
+      userChannel.publish({ id: '1', action: 'login' });
+      systemChannel.publish({ code: 200, message: 'OK' });
+      
+      expect(userHandler).toHaveBeenCalledWith({ id: '1', action: 'login' });
+      expect(systemHandler).toHaveBeenCalledWith({ code: 200, message: 'OK' });
+    });
+
+    it('should handle channel cleanup', () => {
+      const hub = createPubSubHub();
+      const channel = hub.channel<string>('test');
+      const handler = vi.fn();
+      
+      channel.subscribe(handler);
+      hub.removeChannel('test');
+      
+      // Create new channel with same name
+      const newChannel = hub.channel<string>('test');
+      newChannel.publish('hello');
+      
+      expect(handler).not.toHaveBeenCalled(); // Old subscriber removed
     });
   });
 
@@ -419,6 +522,65 @@ describe('Pub-Sub Module', () => {
       unsubscribe();
       state.set(30);
       expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle circular dependencies', () => {
+      const state1 = createReactiveState(1);
+      const state2 = createReactiveState(2);
+      
+      const computed1 = combineStates({
+        value: state1,
+        other: state2
+      });
+      
+      const computed2 = combineStates({
+        value: state2,
+        other: computed1
+      });
+      
+      state1.set(3);
+      
+      expect(computed1.get()).toEqual({ value: 3, other: 2 });
+      expect(computed2.get()).toEqual({
+        value: 2,
+        other: { value: 3, other: 2 }
+      });
+    });
+
+    it('should handle async state updates', async () => {
+      const state = createReactiveState<string | null>(null);
+      const loadData = async () => {
+        state.set('loading');
+        await new Promise(resolve => setTimeout(resolve, 0));
+        state.set('loaded');
+      };
+      
+      const values: string[] = [];
+      state.subscribe(value => value && values.push(value));
+      
+      await loadData();
+      
+      expect(values).toEqual(['loading', 'loaded']);
+    });
+
+    it('should support computed values', () => {
+      const count = createReactiveState(0);
+      const isEven = createReactiveState(false);
+      
+      // Set initial value based on count
+      isEven.set(count.get() % 2 === 0);
+      
+      count.subscribe(() => {
+        isEven.set(count.get() % 2 === 0);
+      });
+      
+      expect(isEven.get()).toBe(true); // 0 is even
+      
+      count.set(1);
+      expect(isEven.get()).toBe(false);
+      
+      count.set(2);
+      expect(isEven.get()).toBe(true);
     });
   });
 
@@ -527,6 +689,140 @@ describe('Pub-Sub Module', () => {
       expect(handler1).not.toHaveBeenCalled();
       expect(handler2).not.toHaveBeenCalled(); 
       expect(handler3).not.toHaveBeenCalled();
+    });
+
+    it('should handle nested state combinations', () => {
+      interface UserState {
+        name: string;
+        age: number;
+      }
+      interface SettingsState {
+        theme: string;
+      }
+      interface NotificationsState {
+        enabled: boolean;
+      }
+      interface ComputedState {
+        userName: string;
+        isDarkMode: boolean;
+      }
+      
+      const user = createReactiveState<UserState>({ name: 'John', age: 30 });
+      const settings = createReactiveState<SettingsState>({ theme: 'dark' });
+      const notifications = createReactiveState<NotificationsState>({ enabled: true });
+      
+      const appState = combineStates({
+        user,
+        settings,
+        notifications
+      });
+      
+      const computed = createReactiveState<ComputedState>({
+        userName: 'John',
+        isDarkMode: true
+      });
+      
+      appState.subscribe(state => {
+        computed.set({
+          userName: state.user.name,
+          isDarkMode: state.settings.theme === 'dark'
+        });
+      });
+      
+      const derivedState = combineStates({
+        app: appState,
+        computed
+      });
+      
+      expect(derivedState.get()).toEqual({
+        app: {
+          user: { name: 'John', age: 30 },
+          settings: { theme: 'dark' },
+          notifications: { enabled: true }
+        },
+        computed: {
+          userName: 'John',
+          isDarkMode: true
+        }
+      });
+      
+      user.set({ name: 'Jane', age: 25 });
+      settings.set({ theme: 'light' });
+      
+      expect(derivedState.get()).toEqual({
+        app: {
+          user: { name: 'Jane', age: 25 },
+          settings: { theme: 'light' },
+          notifications: { enabled: true }
+        },
+        computed: {
+          userName: 'Jane',
+          isDarkMode: false
+        }
+      });
+    });
+
+    it('should handle unsubscription', () => {
+      const state1 = createReactiveState(1);
+      const state2 = createReactiveState(2);
+      const combined = combineStates({ state1, state2 });
+      
+      const listener = vi.fn();
+      const unsubscribe = combined.subscribe(listener);
+      
+      state1.set(3);
+      expect(listener).toHaveBeenCalledTimes(1);
+      
+      unsubscribe();
+      state1.set(4);
+      state2.set(5);
+      expect(listener).toHaveBeenCalledTimes(1); // No more updates
+    });
+
+    it('should handle state dependencies', () => {
+      interface ComputedState {
+        value: number;
+        isPositive: boolean;
+      }
+      
+      const count = createReactiveState(0);
+      const multiplier = createReactiveState(2);
+      const computed = createReactiveState<ComputedState>({
+        value: 0,
+        isPositive: false
+      });
+      
+      const updateComputed = () => {
+        const value = count.get() * multiplier.get();
+        computed.set({ value, isPositive: value > 0 });
+      };
+      
+      count.subscribe(updateComputed);
+      multiplier.subscribe(updateComputed);
+      
+      const combined = combineStates({
+        count,
+        multiplier,
+        computed
+      });
+      
+      expect(combined.get()).toEqual({
+        count: 0,
+        multiplier: 2,
+        computed: { value: 0, isPositive: false }
+      });
+      
+      count.set(3);
+      expect(combined.get().computed).toEqual({
+        value: 6,
+        isPositive: true
+      });
+      
+      multiplier.set(3);
+      expect(combined.get().computed).toEqual({
+        value: 9,
+        isPositive: true
+      });
     });
   });
 }); 
