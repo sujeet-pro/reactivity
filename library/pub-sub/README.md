@@ -1,5 +1,23 @@
 # Pub-Sub Implementation
 
+## 📚 Navigation
+
+**🧠 [Main Documentation](../../README.md)** - Overview of all reactivity patterns
+
+**📖 Individual Pattern Documentation:**
+- **[Signals Implementation](../signals/README.md)** - Fine-grained reactivity with automatic dependency tracking
+- **[Proxy State Implementation](../proxy-state/README.md)** - Object mutation tracking using JavaScript Proxies
+- **[Pub-Sub Implementation](README.md)** - Event-driven architecture with publishers and subscribers (you are here)
+- **[RxJS-style Implementation](../rxjs-reactive/README.md)** - Observable streams with functional operators
+
+**🔗 Quick Links:**
+- [Examples](../../examples/) - Interactive examples and demos
+- [API Reference](../) - Complete API documentation
+- [Tests](pub-sub.test.ts) - Test suite for pub-sub
+- [Performance Benchmarks](../benchmarks/) - Performance comparisons
+
+---
+
 ## 🧠 The Idea Behind Pub-Sub
 
 The Publish-Subscribe pattern represents a **decoupled communication paradigm** where components communicate through events without direct knowledge of each other. The core philosophy is:
@@ -10,6 +28,11 @@ The Publish-Subscribe pattern represents a **decoupled communication paradigm** 
 4. **Dynamic Subscriptions**: Subscribers can join/leave at runtime without affecting the system
 
 This approach promotes the **separation of concerns** by allowing components to focus on their primary responsibilities while communicating through a well-defined event interface. It's particularly powerful for building modular, extensible systems.
+
+**🔗 Compare with other patterns:**
+- **[Signals](../signals/README.md)** - Better for fine-grained reactivity and UI updates
+- **[Proxy State](../proxy-state/README.md)** - Better for object state management
+- **[RxJS-style](../rxjs-reactive/README.md)** - Better for complex async flows and data transformation
 
 ### Pub-Sub Architecture Overview
 
@@ -1224,3 +1247,11 @@ class RobustEventEmitter<T extends Record<string, any>> {
 ```
 
 This pub-sub implementation provides a robust foundation for building event-driven architectures with excellent type safety, performance characteristics, and developer experience.
+
+---
+
+**📚 Navigation:**
+- **[Main Documentation](../../README.md)** - Overview of all reactivity patterns
+- **[Signals Implementation](../signals/README.md)** - Fine-grained reactivity with automatic dependency tracking
+- **[Proxy State Implementation](../proxy-state/README.md)** - Object mutation tracking using JavaScript Proxies
+- **[RxJS-style Implementation](../rxjs-reactive/README.md)** - Observable streams with functional operators

@@ -33,19 +33,43 @@ This approach eliminates the need for frameworks to track "what changed" by maki
 
 ```mermaid
 graph TD
-    A[Signal Creation] --> B[Value Storage]
-    B --> C[Dependency Registration]
-    C --> D[Effect Execution]
-    D --> E[Signal Access]
-    E --> F[Observer Registration]
-    F --> G[Signal Change]
-    G --> H[Notify Subscribers]
-    H --> I[Effect Re-execution]
+    A[createSignal] --> B[Initialize Value & Subscribers]
+    B --> C[Set Metadata]
+    C --> D[Return getter, setter]
+    
+    E[createEffect] --> F[Set isDisposed = false]
+    F --> G[Execute Effect Function]
+    G --> H[Set currentObserver]
+    H --> I[Access Signals via getter]
+    I --> J[Register Effect as Subscriber]
+    J --> K[Establish Dependencies]
+    K --> L[Setup Cleanup Function]
+    
+    M[Signal Update via setter] --> N[Calculate New Value]
+    N --> O[Check Equality]
+    O --> P{Values Changed?}
+    P -->|Yes| Q[Update Signal Value]
+    P -->|No| R[Skip Update]
+    Q --> S[Update Metadata]
+    S --> T[Notify All Subscribers]
+    T --> U[Re-run Effects]
+    U --> V[Handle Errors]
+    V --> W[Update Dependencies]
+    
+    X[createMemo] --> Y[Create Internal Signal]
+    Y --> Z[Create Effect for Computation]
+    Z --> AA[Execute Computation]
+    AA --> BB[Update Internal Signal]
+    BB --> CC[Return Signal Getter]
+    CC --> DD[Lazy Evaluation]
     
     style A fill:#e1f5fe,stroke:#333,color:#000
-    style G fill:#ff9999,stroke:#333,color:#000
-    style H fill:#99ccff,stroke:#333,color:#000
-    style I fill:#99ff99,stroke:#333,color:#000
+    style E fill:#ffcc99,stroke:#333,color:#000
+    style M fill:#ff9999,stroke:#333,color:#000
+    style X fill:#99ccff,stroke:#333,color:#000
+    style Q fill:#99ff99,stroke:#333,color:#000
+    style U fill:#99ccff,stroke:#333,color:#000
+    style V fill:#ffcc99,stroke:#333,color:#000
 ```
 
 ## 🎯 Use Cases
@@ -223,25 +247,43 @@ function runWithObserver<T>(observer: EffectFunction | null, fn: () => T): T {
 
 ```mermaid
 graph TD
-    A[createSignal] --> B[Initialize Value]
-    B --> C[Create Subscribers Set]
-    C --> D[Create Getter Function]
-    D --> E[Create Setter Function]
-    E --> F[Return [getter, setter]]
+    A[createSignal] --> B[Initialize Value & Subscribers]
+    B --> C[Set Metadata]
+    C --> D[Return getter, setter]
     
-    G[Signal Access] --> H[Check Current Observer]
-    H --> I[Add to Subscribers]
-    I --> J[Return Value]
+    E[createEffect] --> F[Set isDisposed = false]
+    F --> G[Execute Effect Function]
+    G --> H[Set currentObserver]
+    H --> I[Access Signals via getter]
+    I --> J[Register Effect as Subscriber]
+    J --> K[Establish Dependencies]
+    K --> L[Setup Cleanup Function]
     
-    K[Signal Update] --> L[Compare Values]
-    L --> M[Update Value]
-    M --> N[Notify Subscribers]
-    N --> O[Trigger Effects]
+    M[Signal Update via setter] --> N[Calculate New Value]
+    N --> O[Check Equality]
+    O --> P{Values Changed?}
+    P -->|Yes| Q[Update Signal Value]
+    P -->|No| R[Skip Update]
+    Q --> S[Update Metadata]
+    S --> T[Notify All Subscribers]
+    T --> U[Re-run Effects]
+    U --> V[Handle Errors]
+    V --> W[Update Dependencies]
+    
+    X[createMemo] --> Y[Create Internal Signal]
+    Y --> Z[Create Effect for Computation]
+    Z --> AA[Execute Computation]
+    AA --> BB[Update Internal Signal]
+    BB --> CC[Return Signal Getter]
+    CC --> DD[Lazy Evaluation]
     
     style A fill:#e1f5fe,stroke:#333,color:#000
-    style G fill:#99ccff,stroke:#333,color:#000
-    style K fill:#ff9999,stroke:#333,color:#000
-    style O fill:#99ff99,stroke:#333,color:#000
+    style E fill:#ffcc99,stroke:#333,color:#000
+    style M fill:#ff9999,stroke:#333,color:#000
+    style X fill:#99ccff,stroke:#333,color:#000
+    style Q fill:#99ff99,stroke:#333,color:#000
+    style U fill:#99ccff,stroke:#333,color:#000
+    style V fill:#ffcc99,stroke:#333,color:#000
 ```
 
 ```typescript

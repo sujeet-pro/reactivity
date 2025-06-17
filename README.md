@@ -359,20 +359,21 @@ Pub-Sub provides event-driven communication between decoupled components. It's p
 
 ```mermaid
 graph TD
-    A[Publisher] --> B[Event Emitter]
-    B --> C[Event Channel]
-    C --> D[Subscribers]
-    D --> E[Handler Execution]
-    E --> F[UI Updates]
-    E --> G[Side Effects]
+    A[Event Emitter] --> B[Event Map]
+    B --> C[Event: userLogin]
+    B --> D[Event: userLogout]
+    C --> E[Handler Set 1]
+    C --> F[Handler Set 2]
+    D --> G[Handler Set 3]
     
-    B --> H[Hub Management]
-    H --> I[Multiple Channels]
-    I --> J[Global Listeners]
+    H[Publisher] --> I["emit(event, data)"]
+    I --> J[Find Event Handlers]
+    J --> K[Execute Handlers]
+    K --> L[Error Isolation]
     
-    style A fill:#e8f5e8,stroke:#333,color:#000
-    style B fill:#ff9999,stroke:#333,color:#000
-    style D fill:#99ccff,stroke:#333,color:#000
+    style H fill:#e8f5e8,stroke:#333,color:#000
+    style I fill:#ff9999,stroke:#333,color:#000
+    style K fill:#99ccff,stroke:#333,color:#000
 ```
 
 #### Core Implementation
@@ -643,7 +644,7 @@ graph TD
     C --> F[Handler Set 2]
     D --> G[Handler Set 3]
     
-    H[Publisher] --> I[emit(event, data)]
+    H[Publisher] --> I["emit(event, data)"]
     I --> J[Find Event Handlers]
     J --> K[Execute Handlers]
     K --> L[Error Isolation]
