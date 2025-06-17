@@ -1,5 +1,23 @@
 # Proxy State Implementation
 
+## 📚 Navigation
+
+**🧠 [Main Documentation](../../README.md)** - Overview of all reactivity patterns
+
+**📖 Individual Pattern Documentation:**
+- **[Signals Implementation](../signals/README.md)** - Fine-grained reactivity with automatic dependency tracking
+- **[Proxy State Implementation](README.md)** - Object mutation tracking using JavaScript Proxies (you are here)
+- **[Pub-Sub Implementation](../pub-sub/README.md)** - Event-driven architecture with publishers and subscribers
+- **[RxJS-style Implementation](../rxjs-reactive/README.md)** - Observable streams with functional operators
+
+**🔗 Quick Links:**
+- [Examples](../../examples/) - Interactive examples and demos
+- [API Reference](../) - Complete API documentation
+- [Tests](proxy-state.test.ts) - Test suite for proxy state
+- [Performance Benchmarks](../benchmarks/) - Performance comparisons
+
+---
+
 ## 🧠 The Idea Behind Proxy State
 
 Proxy State represents a **transparent reactivity paradigm** where objects become reactive through JavaScript Proxies, enabling automatic change detection without requiring special syntax or manual tracking. The core philosophy is:
@@ -10,6 +28,27 @@ Proxy State represents a **transparent reactivity paradigm** where objects becom
 4. **Immutable Snapshots**: Maintain clean state copies for time-travel debugging
 
 This approach provides Vue.js-style reactivity where developers can work with familiar object mutation patterns while gaining automatic change detection. The proxy layer intercepts all property access, modification, and deletion operations.
+
+### Proxy State Architecture Overview
+
+```mermaid
+graph TD
+    A[Object Creation] --> B[Proxy Wrapper]
+    B --> C[Property Access Tracking]
+    C --> D[Property Change Interception]
+    D --> E[Path-based Notifications]
+    E --> F[Subscriber Updates]
+    F --> G[UI/Effect Updates]
+    
+    B --> H[Deep Proxying]
+    H --> I[Nested Object Wrapping]
+    I --> J[Recursive Reactivity]
+    
+    style A fill:#f3e5f5,stroke:#333,color:#000
+    style D fill:#ff9999,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
+    style G fill:#99ff99,stroke:#333,color:#000
+```
 
 ## 🎯 Use Cases
 
@@ -28,6 +67,42 @@ This approach provides Vue.js-style reactivity where developers can work with fa
 - **Primitive Values**: Signals are more efficient for simple values
 - **Functional Approaches**: If you prefer immutable update patterns
 - **Memory-Constrained Environments**: Proxy metadata adds memory overhead
+
+**🔗 Compare with other patterns:**
+- **[Signals](../signals/README.md)** - Better for primitive values and high-frequency updates
+- **[Pub-Sub](../pub-sub/README.md)** - Better for event-driven communication
+- **[RxJS-style](../rxjs-reactive/README.md)** - Better for complex async flows
+
+### Proxy State Usage Patterns
+
+```mermaid
+graph LR
+    subgraph "Basic Proxy State"
+        A[createProxyState] --> B[Reactive Object]
+        B --> C[Direct Mutations]
+        B --> D[Change Notifications]
+    end
+    
+    subgraph "Computed State"
+        E[createComputedState] --> F[Derived Values]
+        F --> G[Automatic Updates]
+    end
+    
+    subgraph "Batch Updates"
+        H[batch] --> I[Multiple Changes]
+        I --> J[Single Notification]
+    end
+    
+    subgraph "Immutable Updates"
+        K[updateProxyState] --> L[Functional Updates]
+        L --> M[Clean State Copies]
+    end
+    
+    style A fill:#f3e5f5,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
+    style H fill:#ffcc99,stroke:#333,color:#000
+    style K fill:#99ff99,stroke:#333,color:#000
+```
 
 ### Specific Use Case Examples
 
@@ -201,6 +276,30 @@ configState.__subscribe((newValue, oldValue, path) => {
 ### Core Architecture
 
 #### 1. Proxy Trap Handlers
+
+```mermaid
+graph TD
+    A[Property Access] --> B[Get Trap]
+    B --> C[Track Access]
+    C --> D[Deep Proxy Check]
+    D --> E[Wrap Nested Objects]
+    E --> F[Return Proxied Value]
+    
+    G[Property Assignment] --> H[Set Trap]
+    H --> I[Compare Values]
+    I --> J[Notify Listeners]
+    J --> K[Update Metadata]
+    
+    L[Property Deletion] --> M[DeleteProperty Trap]
+    M --> N[Remove Property]
+    N --> O[Notify Listeners]
+    
+    style A fill:#f3e5f5,stroke:#333,color:#000
+    style G fill:#ff9999,stroke:#333,color:#000
+    style J fill:#99ccff,stroke:#333,color:#000
+    style L fill:#ffcc99,stroke:#333,color:#000
+```
+
 ```typescript
 const proxyTraps: ProxyHandler<any> = {
   get(target, property, receiver) {
@@ -251,6 +350,28 @@ const proxyTraps: ProxyHandler<any> = {
 - **Change notifications**: Immediate propagation with full path context
 
 #### 2. Metadata Management
+
+```mermaid
+graph TD
+    A[Object Creation] --> B[WeakMap Storage]
+    B --> C[Metadata Structure]
+    C --> D[Listeners Set]
+    C --> E[Path Information]
+    C --> F[Parent References]
+    C --> G[Computed States]
+    
+    H[Property Access] --> I[Get Metadata]
+    I --> J[Track Dependencies]
+    
+    K[Property Change] --> L[Update Metadata]
+    L --> M[Notify Listeners]
+    
+    style A fill:#f3e5f5,stroke:#333,color:#000
+    style H fill:#99ccff,stroke:#333,color:#000
+    style K fill:#ff9999,stroke:#333,color:#000
+    style M fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 // WeakMap-based metadata storage to prevent memory leaks
 const proxyMetadata = new WeakMap<object, StateMetadata>();
@@ -280,6 +401,25 @@ function setMetadata(obj: any, metadata: StateMetadata): void {
 - **Computed states**: Tracks derived values for automatic updates
 
 #### 3. Subscription System
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant P as Proxy
+    participant M as Metadata
+    participant L as Listeners
+    
+    C->>P: state.user.name = 'Jane'
+    P->>M: Get metadata
+    P->>M: Check value change
+    M->>L: Notify all listeners
+    L->>C: Call subscription callbacks
+    
+    Note over P: Deep proxying
+    P->>P: Wrap nested objects
+    P->>M: Track property access
+```
+
 ```typescript
 export function createProxyState<T extends object>(
   initialState: T,
@@ -322,6 +462,24 @@ export function createProxyState<T extends object>(
 ```
 
 #### 4. Computed State Implementation
+
+```mermaid
+graph TD
+    A[createComputedState] --> B[Create Cached Value]
+    B --> C[Subscribe to Dependencies]
+    C --> D[Initial Computation]
+    D --> E[Return Computed State]
+    
+    F[Dependency Change] --> G[Mark as Stale]
+    G --> H[Re-compute Value]
+    H --> I[Update Cache]
+    I --> J[Notify Listeners]
+    
+    style A fill:#99ccff,stroke:#333,color:#000
+    style F fill:#ff9999,stroke:#333,color:#000
+    style J fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 export function createComputedState<T extends readonly any[], R>(
   dependencies: T,
@@ -372,6 +530,23 @@ export function createComputedState<T extends readonly any[], R>(
 ```
 
 #### 5. Batch Update System
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant B as Batch Manager
+    participant P as Proxy
+    participant L as Listeners
+    
+    C->>B: batch(() => { ... })
+    B->>B: batchDepth++
+    C->>P: Multiple property changes
+    P->>B: Queue notifications
+    B->>B: batchDepth--
+    B->>L: Flush all notifications
+    Note over B: Only when batchDepth === 0
+```
+
 ```typescript
 let batchDepth = 0;
 let batchedNotifications: Array<{
@@ -428,6 +603,21 @@ function flushBatchedNotifications() {
 ### Advanced Features
 
 #### 1. Immutable Update Patterns
+
+```mermaid
+graph TD
+    A[updateProxyState] --> B[Create Snapshot]
+    B --> C[Apply Updater Function]
+    C --> D[Compare Changes]
+    D --> E[Apply to Original]
+    E --> F[Trigger Notifications]
+    
+    style A fill:#99ff99,stroke:#333,color:#000
+    style B fill:#99ccff,stroke:#333,color:#000
+    style E fill:#ff9999,stroke:#333,color:#000
+    style F fill:#ffcc99,stroke:#333,color:#000
+```
+
 ```typescript
 export function updateProxyState<T>(
   state: ProxyState<T>,
@@ -459,6 +649,25 @@ function applyChanges(target: any, draft: any, path: string[] = []): void {
 ```
 
 #### 2. Multi-State Coordination
+
+```mermaid
+graph TD
+    A[Multiple States] --> B[subscribeToStates]
+    B --> C[Subscribe to Each State]
+    C --> D[Coordinate Changes]
+    D --> E[Unified Notifications]
+    
+    F[State 1 Change] --> G[Notify Coordinator]
+    F --> H[State 2 Change] --> G
+    F --> I[State N Change] --> G
+    G --> J[Execute Handler]
+    
+    style A fill:#f3e5f5,stroke:#333,color:#000
+    style B fill:#99ccff,stroke:#333,color:#000
+    style G fill:#ff9999,stroke:#333,color:#000
+    style J fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 export function subscribeToStates<T extends readonly ProxyState<any>[]>(
   states: T,
@@ -477,6 +686,26 @@ export function subscribeToStates<T extends readonly ProxyState<any>[]>(
 ```
 
 #### 3. Time-Travel Debugging
+
+```mermaid
+graph TD
+    A[State Change] --> B[Save Snapshot]
+    B --> C[Add to History]
+    C --> D[Update Current Index]
+    
+    E[Undo Request] --> F[Decrement Index]
+    F --> G[Restore State]
+    
+    H[Redo Request] --> I[Increment Index]
+    I --> J[Restore State]
+    
+    style A fill:#ff9999,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
+    style H fill:#ffcc99,stroke:#333,color:#000
+    style G fill:#99ff99,stroke:#333,color:#000
+    style J fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 class StateHistory<T> {
   private history: T[] = [];
@@ -520,18 +749,68 @@ class StateHistory<T> {
 ### Performance Characteristics
 
 #### 1. Time Complexity
+
+```mermaid
+graph LR
+    A[Property Access] --> B[O(1) + Proxy Overhead]
+    C[Property Assignment] --> D[O(1) + Notifications]
+    E[Deep Property Access] --> F[O(d) where d = depth]
+    G[Snapshot Creation] --> H[O(m) where m = properties]
+    
+    subgraph "Overhead"
+        B
+        D
+    end
+    
+    style A fill:#99ccff,stroke:#333,color:#000
+    style C fill:#ff9999,stroke:#333,color:#000
+    style E fill:#ffcc99,stroke:#333,color:#000
+    style G fill:#99ff99,stroke:#333,color:#000
+```
+
 - **Property access**: O(1) + proxy overhead (~2-3x slower than direct access)
 - **Property assignment**: O(1) + notification overhead O(n) where n = subscribers
 - **Deep property access**: O(d) where d = nesting depth
 - **Snapshot creation**: O(m) where m = total properties in object tree
 
 #### 2. Memory Usage
+
+```mermaid
+graph TD
+    A[Proxy Overhead] --> B[~200-300 bytes per object]
+    C[Metadata Storage] --> D[~100 bytes per object]
+    E[Deep Proxying] --> F[Scales with complexity]
+    G[Snapshot Storage] --> H[Full object copy]
+    
+    style A fill:#f3e5f5,stroke:#333,color:#000
+    style C fill:#99ccff,stroke:#333,color:#000
+    style E fill:#ffcc99,stroke:#333,color:#000
+    style G fill:#99ff99,stroke:#333,color:#000
+```
+
 - **Proxy overhead**: ~200-300 bytes per proxied object
 - **Metadata storage**: ~100 bytes per object in WeakMap
 - **Deep proxying**: Memory usage scales with object complexity
 - **Snapshot storage**: Full object copy for each snapshot
 
 #### 3. Performance Optimizations
+
+```mermaid
+graph TD
+    A[Lazy Proxying] --> B[Only Proxy When Accessed]
+    B --> C[Proxy Cache]
+    C --> D[Memory Efficiency]
+    
+    E[Path-based Equality] --> F[Skip Irrelevant Paths]
+    F --> G[Custom Equality Functions]
+    G --> H[Reduced Notifications]
+    
+    style A fill:#99ccff,stroke:#333,color:#000
+    style E fill:#ffcc99,stroke:#333,color:#000
+    style D fill:#99ff99,stroke:#333,color:#000
+    style H fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 // Lazy proxying - only proxy when accessed
 const lazyProxy = new Proxy(target, {
@@ -562,6 +841,22 @@ function shouldNotify(newValue: any, oldValue: any, path: string[]): boolean {
 ### Memory Management
 
 #### 1. Automatic Cleanup
+
+```mermaid
+graph TD
+    A[WeakMap Storage] --> B[Garbage Collection]
+    B --> C[Automatic Cleanup]
+    
+    D[Computed State] --> E[Cleanup Timer]
+    E --> F[Auto-dispose After Inactivity]
+    F --> G[Memory Reclamation]
+    
+    style A fill:#f3e5f5,stroke:#333,color:#000
+    style D fill:#99ccff,stroke:#333,color:#000
+    style C fill:#99ff99,stroke:#333,color:#000
+    style G fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 // WeakMap ensures garbage collection of orphaned objects
 const proxyMetadata = new WeakMap();
@@ -585,6 +880,18 @@ class ComputedState {
 ```
 
 #### 2. Memory Leak Prevention
+
+```mermaid
+graph LR
+    A[❌ Circular Reference] --> B[Memory Leak]
+    C[✅ ID References] --> D[Proper Cleanup]
+    D --> E[Garbage Collection]
+    
+    style A fill:#ff9999,stroke:#333,color:#000
+    style C fill:#99ff99,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
+```
+
 ```typescript
 // ❌ Memory leak - circular reference
 const parent = createProxyState({ children: [] });
@@ -599,6 +906,21 @@ const child = createProxyState({ parentId: 'parent1' });
 ### Error Handling
 
 #### 1. Graceful Degradation
+
+```mermaid
+graph TD
+    A[Proxy Creation] --> B[Try Proxy]
+    B --> C{Proxy Supported?}
+    C -->|Yes| D[Use Proxy]
+    C -->|No| E[Fallback to Direct Object]
+    E --> F[Warning Log]
+    
+    style A fill:#f3e5f5,stroke:#333,color:#000
+    style B fill:#99ccff,stroke:#333,color:#000
+    style D fill:#99ff99,stroke:#333,color:#000
+    style E fill:#ff9999,stroke:#333,color:#000
+```
+
 ```typescript
 function safeProxy<T>(target: T): T {
   try {
@@ -611,6 +933,22 @@ function safeProxy<T>(target: T): T {
 ```
 
 #### 2. Listener Error Isolation
+
+```mermaid
+graph TD
+    A[Listener Execution] --> B[Try Block]
+    B --> C[Execute Listener]
+    C --> D[Success Path]
+    
+    B --> E[Catch Block]
+    E --> F[Error Logging]
+    F --> G[Continue Other Listeners]
+    
+    style A fill:#ffcc99,stroke:#333,color:#000
+    style E fill:#ff9999,stroke:#333,color:#000
+    style G fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 function notifyListeners(newValue: any, oldValue: any, path: string[]) {
   for (const listener of listeners) {
@@ -627,6 +965,23 @@ function notifyListeners(newValue: any, oldValue: any, path: string[]) {
 ### Best Practices
 
 #### 1. State Structure Design
+
+```mermaid
+graph TD
+    A[❌ Too Deep Nesting] --> B[Deep Object Tree]
+    B --> C[Performance Issues]
+    C --> D[Hard to Debug]
+    
+    E[✅ Flatter Structure] --> F[Normalized State]
+    F --> G[Better Performance]
+    G --> H[Easier Debugging]
+    
+    style A fill:#ff9999,stroke:#333,color:#000
+    style E fill:#99ff99,stroke:#333,color:#000
+    style C fill:#ffcc99,stroke:#333,color:#000
+    style G fill:#99ccff,stroke:#333,color:#000
+```
+
 ```typescript
 // ❌ Too deep nesting
 const badState = createProxyState({
@@ -664,6 +1019,23 @@ const goodState = createProxyState({
 ```
 
 #### 2. Subscription Granularity
+
+```mermaid
+graph TD
+    A[❌ Over-subscribing] --> B[All Changes Handler]
+    B --> C[Process Irrelevant Changes]
+    C --> D[Performance Impact]
+    
+    E[✅ Targeted Subscriptions] --> F[Path-based Filtering]
+    F --> G[Process Only Relevant Changes]
+    G --> H[Better Performance]
+    
+    style A fill:#ff9999,stroke:#333,color:#000
+    style E fill:#99ff99,stroke:#333,color:#000
+    style D fill:#ffcc99,stroke:#333,color:#000
+    style H fill:#99ccff,stroke:#333,color:#000
+```
+
 ```typescript
 // ❌ Over-subscribing
 state.__subscribe((newValue, oldValue, path) => {
@@ -682,6 +1054,23 @@ state.__subscribe((newValue, oldValue, path) => {
 ```
 
 #### 3. Performance Optimization
+
+```mermaid
+graph TD
+    A[Batch Updates] --> B[Multiple Changes]
+    B --> C[Single Notification]
+    C --> D[Performance Gain]
+    
+    E[Computed States] --> F[Expensive Calculations]
+    F --> G[Cached Results]
+    G --> H[Automatic Updates]
+    
+    style A fill:#ffcc99,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
+    style D fill:#99ff99,stroke:#333,color:#000
+    style H fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 // Use batch updates for multiple changes
 batch(() => {
@@ -961,4 +1350,12 @@ updateProxyState(state, snapshot);
 | Performance | Good | Excellent | Good |
 | Learning curve | Low | Medium | Low |
 | Memory usage | Medium | Low | Low |
-| Path information | Yes | No | Limited | 
+| Path information | Yes | No | Limited |
+
+---
+
+**📚 Navigation:**
+- **[Main Documentation](../../README.md)** - Overview of all reactivity patterns
+- **[Signals Implementation](../signals/README.md)** - Fine-grained reactivity with automatic dependency tracking
+- **[Pub-Sub Implementation](../pub-sub/README.md)** - Event-driven architecture with publishers and subscribers
+- **[RxJS-style Implementation](../rxjs-reactive/README.md)** - Observable streams with functional operators 

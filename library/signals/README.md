@@ -1,5 +1,23 @@
 # Signals Implementation
 
+## 📚 Navigation
+
+**🧠 [Main Documentation](../../README.md)** - Overview of all reactivity patterns
+
+**📖 Individual Pattern Documentation:**
+- **[Signals Implementation](README.md)** - Fine-grained reactivity with automatic dependency tracking (you are here)
+- **[Proxy State Implementation](../proxy-state/README.md)** - Object mutation tracking using JavaScript Proxies
+- **[Pub-Sub Implementation](../pub-sub/README.md)** - Event-driven architecture with publishers and subscribers
+- **[RxJS-style Implementation](../rxjs-reactive/README.md)** - Observable streams with functional operators
+
+**🔗 Quick Links:**
+- [Examples](../../examples/) - Interactive examples and demos
+- [API Reference](../) - Complete API documentation
+- [Tests](signal.test.ts) - Test suite for signals
+- [Performance Benchmarks](../benchmarks/) - Performance comparisons
+
+---
+
 ## 🧠 The Idea Behind Signals
 
 Signals represent a **fine-grained reactive paradigm** inspired by SolidJS, where reactivity is achieved through automatic dependency tracking rather than virtual DOM diffing or manual dependency declaration. The core philosophy is:
@@ -10,6 +28,25 @@ Signals represent a **fine-grained reactive paradigm** inspired by SolidJS, wher
 4. **Functional Purity**: Effects and memos are functions of their signal dependencies
 
 This approach eliminates the need for frameworks to track "what changed" by making the data itself reactive. Each signal acts as both a data container and a dependency tracker.
+
+### Signal Architecture Overview
+
+```mermaid
+graph TD
+    A[Signal Creation] --> B[Value Storage]
+    B --> C[Dependency Registration]
+    C --> D[Effect Execution]
+    D --> E[Signal Access]
+    E --> F[Observer Registration]
+    F --> G[Signal Change]
+    G --> H[Notify Subscribers]
+    H --> I[Effect Re-execution]
+    
+    style A fill:#e1f5fe,stroke:#333,color:#000
+    style G fill:#ff9999,stroke:#333,color:#000
+    style H fill:#99ccff,stroke:#333,color:#000
+    style I fill:#99ff99,stroke:#333,color:#000
+```
 
 ## 🎯 Use Cases
 
@@ -27,6 +64,42 @@ This approach eliminates the need for frameworks to track "what changed" by maki
 - **Event-driven Architecture**: Pub-sub patterns might be more appropriate
 - **Complex Async Flows**: RxJS-style observables handle async better
 - **Deep Object Tracking**: Proxy-based solutions are more natural
+
+**🔗 Compare with other patterns:**
+- **[Proxy State](../proxy-state/README.md)** - Better for complex object mutations
+- **[Pub-Sub](../pub-sub/README.md)** - Better for event-driven communication
+- **[RxJS-style](../rxjs-reactive/README.md)** - Better for complex async flows
+
+### Signal Usage Patterns
+
+```mermaid
+graph LR
+    subgraph "Basic Signal"
+        A[createSignal] --> B[Getter/Setter]
+        B --> C[Value Access]
+        B --> D[Value Update]
+    end
+    
+    subgraph "Derived Signal"
+        E[createMemo] --> F[Computed Value]
+        F --> G[Automatic Updates]
+    end
+    
+    subgraph "Side Effects"
+        H[createEffect] --> I[Reactive Side Effect]
+        I --> J[Cleanup Function]
+    end
+    
+    subgraph "Async Resources"
+        K[createResource] --> L[Async Data]
+        L --> M[Loading States]
+    end
+    
+    style A fill:#e1f5fe,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
+    style H fill:#ffcc99,stroke:#333,color:#000
+    style K fill:#99ff99,stroke:#333,color:#000
+```
 
 ### Specific Use Case Examples
 
@@ -102,6 +175,26 @@ createEffect(() => {
 ### Core Architecture
 
 #### 1. Dependency Tracking System
+
+```mermaid
+sequenceDiagram
+    participant E as Effect
+    participant G as Global Context
+    participant S as Signal
+    participant O as Observer Stack
+    
+    E->>G: runWithObserver(effect, fn)
+    G->>O: Push previous observer
+    G->>G: Set currentObserver = effect
+    E->>S: signal() - access value
+    S->>G: Check currentObserver
+    S->>S: Add effect to subscribers
+    G->>O: Pop and restore observer
+    Note over S: When signal changes
+    S->>E: Notify all subscribers
+    E->>E: Re-run effect function
+```
+
 ```typescript
 // Global context for tracking dependencies
 let currentObserver: EffectFunction | null = null;
@@ -127,6 +220,30 @@ function runWithObserver<T>(observer: EffectFunction | null, fn: () => T): T {
 - Stack-based approach handles nested computations correctly
 
 #### 2. Signal Implementation
+
+```mermaid
+graph TD
+    A[createSignal] --> B[Initialize Value]
+    B --> C[Create Subscribers Set]
+    C --> D[Create Getter Function]
+    D --> E[Create Setter Function]
+    E --> F[Return [getter, setter]]
+    
+    G[Signal Access] --> H[Check Current Observer]
+    H --> I[Add to Subscribers]
+    I --> J[Return Value]
+    
+    K[Signal Update] --> L[Compare Values]
+    L --> M[Update Value]
+    M --> N[Notify Subscribers]
+    N --> O[Trigger Effects]
+    
+    style A fill:#e1f5fe,stroke:#333,color:#000
+    style G fill:#99ccff,stroke:#333,color:#000
+    style K fill:#ff9999,stroke:#333,color:#000
+    style O fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 export function createSignal<T>(
   initialValue: T,
@@ -171,6 +288,29 @@ export function createSignal<T>(
 - **Immediate execution**: Changes propagate synchronously
 
 #### 3. Effect Implementation
+
+```mermaid
+graph TD
+    A[createEffect] --> B[Create Effect Function]
+    B --> C[Set isDisposed = false]
+    C --> D[Execute Effect]
+    D --> E[Establish Dependencies]
+    E --> F[Return Effect Object]
+    
+    G[Effect Re-run] --> H[Check isDisposed]
+    H --> I[Run Cleanup]
+    I --> J[Execute with Observer]
+    J --> K[Set New Cleanup]
+    
+    L[Effect Disposal] --> M[Set isDisposed = true]
+    M --> N[Run Final Cleanup]
+    N --> O[Remove from Subscribers]
+    
+    style A fill:#ffcc99,stroke:#333,color:#000
+    style G fill:#ff9999,stroke:#333,color:#000
+    style L fill:#99ccff,stroke:#333,color:#000
+```
+
 ```typescript
 export function createEffect(fn: EffectFunction): Effect {
   let isDisposed = false;
@@ -218,6 +358,24 @@ export function createEffect(fn: EffectFunction): Effect {
 5. **Disposal**: Manual cleanup when effect is no longer needed
 
 #### 4. Memo Implementation (Derived State)
+
+```mermaid
+graph TD
+    A[createMemo] --> B[Create Internal Signal]
+    B --> C[Create Effect]
+    C --> D[Compute Value]
+    D --> E[Update Signal]
+    E --> F[Return Signal Getter]
+    
+    G[Dependency Change] --> H[Re-compute Value]
+    H --> I[Update Cached Value]
+    I --> J[Notify Memo Subscribers]
+    
+    style A fill:#99ccff,stroke:#333,color:#000
+    style G fill:#ff9999,stroke:#333,color:#000
+    style J fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 export function createMemo<T>(fn: () => T, initialValue?: T): Memo<T> {
   let hasInitialValue = initialValue !== undefined;
@@ -241,6 +399,32 @@ export function createMemo<T>(fn: () => T, initialValue?: T): Memo<T> {
 - **Memory efficient**: Only stores the computed result, not intermediate values
 
 #### 5. Resource Implementation (Async Handling)
+
+```mermaid
+graph TD
+    A[createResource] --> B[Create Loading Signal]
+    B --> C[Create Error Signal]
+    C --> D[Create Data Signal]
+    D --> E[Create Refetch Function]
+    E --> F[Initial Fetch]
+    F --> G[Return Resource Function]
+    
+    H[Resource Access] --> I[Return Resource State]
+    I --> J[Loading: true/false]
+    I --> K[Error: Error/null]
+    I --> L[Data: T/null]
+    
+    M[Refetch Trigger] --> N[Set Loading: true]
+    N --> O[Clear Error]
+    O --> P[Execute Fetcher]
+    P --> Q[Set Data/Error]
+    Q --> R[Set Loading: false]
+    
+    style A fill:#99ff99,stroke:#333,color:#000
+    style H fill:#99ccff,stroke:#333,color:#000
+    style M fill:#ff9999,stroke:#333,color:#000
+```
+
 ```typescript
 export function createResource<T>(
   fetcher: () => Promise<T>,
@@ -279,6 +463,21 @@ export function createResource<T>(
 ### Advanced Features
 
 #### 1. Custom Equality Functions
+
+```mermaid
+graph TD
+    A[Signal Update] --> B[Custom Equality Check]
+    B --> C{Values Equal?}
+    C -->|Yes| D[Skip Update]
+    C -->|No| E[Update Value]
+    E --> F[Notify Subscribers]
+    
+    style A fill:#ff9999,stroke:#333,color:#000
+    style B fill:#99ccff,stroke:#333,color:#000
+    style D fill:#99ff99,stroke:#333,color:#000
+    style F fill:#ffcc99,stroke:#333,color:#000
+```
+
 ```typescript
 const [user, setUser] = createSignal(
   { name: 'John', age: 30 },
@@ -293,6 +492,22 @@ setUser({ name: 'John', age: 31 }); // Updates
 ```
 
 #### 2. Conditional Effects
+
+```mermaid
+graph TD
+    A[Conditional Effect] --> B[Check Condition]
+    B --> C{Condition Met?}
+    C -->|Yes| D[Execute Effect]
+    C -->|No| E[Skip Execution]
+    D --> F[Establish Dependencies]
+    E --> G[No Dependencies]
+    
+    style A fill:#ffcc99,stroke:#333,color:#000
+    style B fill:#99ccff,stroke:#333,color:#000
+    style D fill:#99ff99,stroke:#333,color:#000
+    style E fill:#ff9999,stroke:#333,color:#000
+```
+
 ```typescript
 const [isLoggedIn, setIsLoggedIn] = createSignal(false);
 const [user, setUser] = createSignal<User | null>(null);
@@ -309,6 +524,23 @@ createEffect(() => {
 ```
 
 #### 3. Effect Cleanup Patterns
+
+```mermaid
+sequenceDiagram
+    participant E as Effect
+    participant S as Signal
+    participant C as Cleanup
+    
+    E->>E: Initial execution
+    E->>S: Access signal
+    E->>C: Return cleanup function
+    Note over E: Signal changes
+    E->>C: Execute previous cleanup
+    E->>E: Re-execute effect
+    E->>S: Access signal again
+    E->>C: Return new cleanup
+```
+
 ```typescript
 createEffect(() => {
   const interval = setInterval(() => {
@@ -323,18 +555,71 @@ createEffect(() => {
 ### Performance Characteristics
 
 #### 1. Time Complexity
+
+```mermaid
+graph LR
+    A[Signal Read] --> B[O(1)]
+    C[Signal Write] --> D[O(n)]
+    E[Effect Creation] --> F[O(1)]
+    G[Dependency Tracking] --> H[O(1)]
+    
+    subgraph "Where n = subscribers"
+        D
+    end
+    
+    style A fill:#99ccff,stroke:#333,color:#000
+    style C fill:#ff9999,stroke:#333,color:#000
+    style E fill:#99ff99,stroke:#333,color:#000
+    style G fill:#ffcc99,stroke:#333,color:#000
+```
+
 - **Signal read**: O(1)
 - **Signal write**: O(n) where n = number of subscribers
 - **Effect creation**: O(1)
 - **Dependency tracking**: O(1) per signal access
 
 #### 2. Memory Usage
-- **Signal**: ~100 bytes + subscriber set
+
+```mermaid
+graph TD
+    A[Signal] --> B[~100 bytes + subscriber set]
+    C[Effect] --> D[~50 bytes + closure]
+    E[Memo] --> F[Signal overhead + cached value]
+    G[Resource] --> H[3 signals + async state]
+    
+    style A fill:#e1f5fe,stroke:#333,color:#000
+    style C fill:#ffcc99,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
+    style G fill:#99ff99,stroke:#333,color:#000
+```
+
+- **Signal**: ~100 bytes + subscriber storage
 - **Effect**: ~50 bytes + closure
 - **Memo**: Signal overhead + cached value
 - **Resource**: 3 signals + async state
 
 #### 3. Update Propagation
+
+```mermaid
+graph LR
+    A[Signal Change] --> B[Notify Subscribers]
+    B --> C[Re-run Effects]
+    C --> D[Update Derived Signals]
+    D --> E[Propagate Changes]
+    
+    subgraph "Complexity"
+        A --> F[O(1)]
+        B --> G[O(n)]
+        C --> H[O(m)]
+        D --> I[O(k*p)]
+    end
+    
+    style A fill:#ff9999,stroke:#333,color:#000
+    style B fill:#99ccff,stroke:#333,color:#000
+    style C fill:#ffcc99,stroke:#333,color:#000
+    style D fill:#99ff99,stroke:#333,color:#000
+```
+
 ```
 Signal Change → Notify Subscribers → Re-run Effects → Update Derived Signals
      ↓                   ↓                ↓                    ↓
@@ -350,11 +635,42 @@ Where:
 ### Memory Management
 
 #### 1. Automatic Cleanup
+
+```mermaid
+graph TD
+    A[Effect Disposal] --> B[Remove from Signal Subscribers]
+    B --> C[Cleanup Resources]
+    C --> D[Garbage Collection]
+    
+    E[Memo Cleanup] --> F[Dispose Internal Effect]
+    F --> G[Remove Dependencies]
+    
+    H[Resource Cleanup] --> I[Cancel Async Operations]
+    I --> J[Clear State Signals]
+    
+    style A fill:#ff9999,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
+    style H fill:#99ff99,stroke:#333,color:#000
+    style D fill:#99ff99,stroke:#333,color:#000
+```
+
 - Effects automatically remove themselves from signal subscriber sets when disposed
 - Memos clean up their internal effects when not referenced
 - Resources clean up async operations on disposal
 
 #### 2. Memory Leak Prevention
+
+```mermaid
+graph LR
+    A[❌ Potential Leak] --> B[Effect Never Disposed]
+    C[✅ Proper Cleanup] --> D[Manual Disposal]
+    D --> E[Garbage Collection]
+    
+    style A fill:#ff9999,stroke:#333,color:#000
+    style C fill:#99ff99,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
+```
+
 ```typescript
 // ❌ Potential leak - effect never disposed
 const effect = createEffect(() => {
@@ -376,6 +692,24 @@ Internal implementation uses WeakMaps for metadata storage to prevent memory lea
 ### Error Handling
 
 #### 1. Effect Error Isolation
+
+```mermaid
+graph TD
+    A[Effect Execution] --> B[Try Block]
+    B --> C[Signal Access]
+    C --> D[Effect Logic]
+    D --> E[Cleanup Setup]
+    E --> F[Success Path]
+    
+    B --> G[Catch Block]
+    G --> H[Error Handler]
+    H --> I[Continue Other Effects]
+    
+    style A fill:#ffcc99,stroke:#333,color:#000
+    style G fill:#ff9999,stroke:#333,color:#000
+    style I fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 createEffect(() => {
   try {
@@ -392,6 +726,23 @@ Resources provide structured error handling with loading/error/data states, maki
 ### Best Practices
 
 #### 1. Signal Granularity
+
+```mermaid
+graph TD
+    A[❌ Too Coarse] --> B[Object Signal]
+    B --> C[Any Property Change]
+    C --> D[All Dependents Update]
+    
+    E[✅ Fine-grained] --> F[Primitive Signals]
+    F --> G[Specific Property Changes]
+    G --> H[Targeted Updates]
+    
+    style A fill:#ff9999,stroke:#333,color:#000
+    style E fill:#99ff99,stroke:#333,color:#000
+    style D fill:#ffcc99,stroke:#333,color:#000
+    style H fill:#99ccff,stroke:#333,color:#000
+```
+
 ```typescript
 // ❌ Too coarse - changes to any user property trigger all dependents
 const [user, setUser] = createSignal({ name: 'John', age: 30, email: 'john@example.com' });
@@ -403,6 +754,23 @@ const [userEmail, setUserEmail] = createSignal('john@example.com');
 ```
 
 #### 2. Effect Organization
+
+```mermaid
+graph TD
+    A[❌ Monolithic Effect] --> B[Single Large Effect]
+    B --> C[Multiple Responsibilities]
+    C --> D[Hard to Debug]
+    
+    E[✅ Focused Effects] --> F[Small, Focused Effects]
+    F --> G[Single Responsibility]
+    G --> H[Easy to Debug]
+    
+    style A fill:#ff9999,stroke:#333,color:#000
+    style E fill:#99ff99,stroke:#333,color:#000
+    style D fill:#ffcc99,stroke:#333,color:#000
+    style H fill:#99ccff,stroke:#333,color:#000
+```
+
 ```typescript
 // ❌ Monolithic effect
 createEffect(() => {
@@ -420,6 +788,23 @@ createEffect(() => syncToServer(user()));
 ```
 
 #### 3. Derived State Patterns
+
+```mermaid
+graph TD
+    A[Source Signals] --> B[createMemo]
+    B --> C[Derived Signals]
+    C --> D[UI Updates]
+    
+    E[Complex Logic] --> F[Multiple Memos]
+    F --> G[Composition]
+    G --> H[Final Result]
+    
+    style A fill:#e1f5fe,stroke:#333,color:#000
+    style B fill:#99ccff,stroke:#333,color:#000
+    style C fill:#99ff99,stroke:#333,color:#000
+    style F fill:#ffcc99,stroke:#333,color:#000
+```
+
 ```typescript
 // Complex derived state
 const [items, setItems] = createSignal<Item[]>([]);
@@ -443,4 +828,12 @@ const completedCount = createMemo(() =>
 const hasCompleted = createMemo(() => completedCount() > 0);
 ```
 
-This signals implementation provides a powerful foundation for building reactive applications with minimal overhead and maximum predictability. 
+This signals implementation provides a powerful foundation for building reactive applications with minimal overhead and maximum predictability.
+
+---
+
+**📚 Navigation:**
+- **[Main Documentation](../../README.md)** - Overview of all reactivity patterns
+- **[Proxy State Implementation](../proxy-state/README.md)** - Object mutation tracking using JavaScript Proxies
+- **[Pub-Sub Implementation](../pub-sub/README.md)** - Event-driven architecture with publishers and subscribers
+- **[RxJS-style Implementation](../rxjs-reactive/README.md)** - Observable streams with functional operators

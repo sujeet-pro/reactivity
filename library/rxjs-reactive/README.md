@@ -12,6 +12,27 @@ RxJS-style reactivity represents a **functional reactive paradigm** based on Obs
 
 This approach transforms asynchronous programming from callback/promise-based imperative code into declarative functional pipelines. It excels at handling complex async scenarios like user interactions, real-time data, and coordinating multiple data sources.
 
+### RxJS-style Architecture Overview
+
+```mermaid
+graph TD
+    A[Observable Creation] --> B[Stream Definition]
+    B --> C[Subscription]
+    C --> D[Value Emission]
+    D --> E[Operator Chain]
+    E --> F[Transformed Values]
+    F --> G[Subscriber Notification]
+    
+    B --> H[Subject/Hot Observable]
+    H --> I[Multiple Subscribers]
+    I --> J[Shared Execution]
+    
+    style A fill:#fff3e0,stroke:#333,color:#000
+    style D fill:#ff9999,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
+    style G fill:#99ff99,stroke:#333,color:#000
+```
+
 ## 🎯 Use Cases
 
 ### When to Choose RxJS-style Observables
@@ -29,6 +50,36 @@ This approach transforms asynchronous programming from callback/promise-based im
 - **Direct Value Storage**: Use signals for simple getter/setter patterns
 - **Synchronous Operations**: Direct function calls are more appropriate
 - **Memory-Constrained Environments**: Observable chains can have significant overhead
+
+### Observable Usage Patterns
+
+```mermaid
+graph LR
+    subgraph "Observable Creation"
+        A[createObservable] --> B[Stream Definition]
+        B --> C[Lazy Evaluation]
+    end
+    
+    subgraph "Subjects"
+        D[createSubject] --> E[Hot Observable]
+        F[createBehaviorSubject] --> G[Stateful Stream]
+    end
+    
+    subgraph "Operators"
+        H[map/filter] --> I[Data Transformation]
+        J[debounce/throttle] --> K[Time Control]
+    end
+    
+    subgraph "Subscription"
+        L[subscribe] --> M[Value Consumption]
+        M --> N[Error Handling]
+    end
+    
+    style A fill:#fff3e0,stroke:#333,color:#000
+    style D fill:#ff9999,stroke:#333,color:#000
+    style H fill:#99ccff,stroke:#333,color:#000
+    style L fill:#99ff99,stroke:#333,color:#000
+```
 
 ### Specific Use Case Examples
 
@@ -330,6 +381,28 @@ autoSave$.subscribe(result => {
 ### Core Architecture
 
 #### 1. Observable Implementation
+
+```mermaid
+graph TD
+    A[Observable Creation] --> B[Subscriber Function]
+    B --> C[Observer Pattern]
+    C --> D[Lazy Evaluation]
+    D --> E[Subscription Management]
+    
+    F[Value Emission] --> G[Observer.next]
+    G --> H[Error Handling]
+    H --> I[Completion]
+    
+    J[Operator Chain] --> K[New Observable]
+    K --> L[Transform Values]
+    L --> M[Propagate Changes]
+    
+    style A fill:#fff3e0,stroke:#333,color:#000
+    style F fill:#ff9999,stroke:#333,color:#000
+    style J fill:#99ccff,stroke:#333,color:#000
+    style M fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 export function createObservable<T>(
   subscriber: (observer: Observer<T>) => (() => void) | void
@@ -460,6 +533,24 @@ export function createObservable<T>(
 - **Error handling**: Errors are contained and propagated through the chain
 
 #### 2. Subject Implementation (Hot Observable)
+
+```mermaid
+graph TD
+    A[Subject Creation] --> B[Observer Set]
+    B --> C[State Management]
+    C --> D[next Method]
+    D --> E[error Method]
+    E --> F[complete Method]
+    
+    G[Multiple Subscribers] --> H[Shared Execution]
+    H --> I[Broadcast to All]
+    I --> J[Error Isolation]
+    
+    style A fill:#ff9999,stroke:#333,color:#000
+    style G fill:#99ccff,stroke:#333,color:#000
+    style I fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 export function createSubject<T>(): Subject<T> {
   const observers = new Set<Observer<T>>();
@@ -559,6 +650,26 @@ export function createSubject<T>(): Subject<T> {
 ```
 
 #### 3. BehaviorSubject Implementation (Stateful Observable)
+
+```mermaid
+graph TD
+    A[BehaviorSubject Creation] --> B[Initial Value]
+    B --> C[Current Value Storage]
+    C --> D[Subject Wrapper]
+    D --> E[Immediate Emission]
+    
+    F[New Subscriber] --> G[Emit Current Value]
+    G --> H[Then Subscribe]
+    
+    I[Value Update] --> J[Update Current Value]
+    J --> K[Broadcast to All]
+    
+    style A fill:#99ccff,stroke:#333,color:#000
+    style F fill:#99ccff,stroke:#333,color:#000
+    style I fill:#ff9999,stroke:#333,color:#000
+    style K fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 export function createBehaviorSubject<T>(initialValue: T): BehaviorSubject<T> {
   let currentValue = initialValue;
@@ -597,127 +708,28 @@ export function createBehaviorSubject<T>(initialValue: T): BehaviorSubject<T> {
 }
 ```
 
-#### 4. Advanced Operators Implementation
-```typescript
-// Debounce operator
-function debounce<T>(delay: number): OperatorFunction<T, T> {
-  return (source: Observable<T>) => createObservable<T>(observer => {
-    let timeoutId: number | undefined;
-    let lastValue: T;
-    let hasValue = false;
-    
-    return source.subscribe({
-      next: value => {
-        lastValue = value;
-        hasValue = true;
-        
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
-        
-        timeoutId = setTimeout(() => {
-          if (hasValue) {
-            observer.next(lastValue);
-          }
-        }, delay);
-      },
-      error: err => observer.error(err),
-      complete: () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          if (hasValue) {
-            observer.next(lastValue);
-          }
-        }
-        observer.complete();
-      }
-    });
-  });
-}
-
-// CombineLatest operator
-function combineLatest<T, R>(
-  ...sources: [...Observable<T>[], (...values: T[]) => R]
-): Observable<R> {
-  const project = sources.pop() as (...values: T[]) => R;
-  const observables = sources as Observable<T>[];
-  
-  return createObservable<R>(observer => {
-    const values: T[] = new Array(observables.length);
-    const hasValue: boolean[] = new Array(observables.length).fill(false);
-    let completedCount = 0;
-    
-    const subscriptions = observables.map((obs, index) => 
-      obs.subscribe({
-        next: value => {
-          values[index] = value;
-          hasValue[index] = true;
-          
-          // Emit only when all sources have emitted at least once
-          if (hasValue.every(Boolean)) {
-            try {
-              const result = project(...values);
-              observer.next(result);
-            } catch (err) {
-              observer.error(err);
-            }
-          }
-        },
-        error: err => observer.error(err),
-        complete: () => {
-          completedCount++;
-          if (completedCount === observables.length) {
-            observer.complete();
-          }
-        }
-      })
-    );
-    
-    return () => {
-      subscriptions.forEach(sub => sub.unsubscribe());
-    };
-  });
-}
-
-// Retry operator with exponential backoff
-function retryWithBackoff<T>(
-  maxRetries: number = 3,
-  baseDelay: number = 1000,
-  maxDelay: number = 10000
-): OperatorFunction<T, T> {
-  return (source: Observable<T>) => createObservable<T>(observer => {
-    let retryCount = 0;
-    
-    const subscribe = () => {
-      return source.subscribe({
-        next: value => observer.next(value),
-        error: err => {
-          if (retryCount < maxRetries) {
-            retryCount++;
-            const delay = Math.min(baseDelay * Math.pow(2, retryCount - 1), maxDelay);
-            
-            setTimeout(() => {
-              subscription.unsubscribe();
-              subscription = subscribe();
-            }, delay);
-          } else {
-            observer.error(err);
-          }
-        },
-        complete: () => observer.complete()
-      });
-    };
-    
-    let subscription = subscribe();
-    
-    return () => subscription.unsubscribe();
-  });
-}
-```
-
 ### Advanced Features
 
 #### 1. Hot vs Cold Observable Management
+
+```mermaid
+graph TD
+    A[Cold Observable] --> B[Each Subscription]
+    B --> C[Independent Execution]
+    C --> D[Separate Resources]
+    
+    E[Hot Observable] --> F[Shared Execution]
+    F --> G[Multiple Subscribers]
+    G --> H[Shared Resources]
+    
+    I[share() Operator] --> J[Convert Cold to Hot]
+    J --> K[RefCount Management]
+    
+    style A fill:#fff3e0,stroke:#333,color:#000
+    style E fill:#ff9999,stroke:#333,color:#000
+    style I fill:#99ccff,stroke:#333,color:#000
+```
+
 ```typescript
 // Cold observable - each subscription gets its own execution
 const coldObservable$ = createObservable<number>(observer => {
@@ -768,78 +780,28 @@ function share<T>(): OperatorFunction<T, T> {
 }
 ```
 
-#### 2. Scheduler System for Testing and Control
-```typescript
-interface SchedulerLike {
-  schedule<T>(work: () => T, delay?: number): Subscription;
-  now(): number;
-}
+#### 2. Memory Management and Resource Cleanup
 
-class AsyncScheduler implements SchedulerLike {
-  schedule<T>(work: () => T, delay: number = 0): Subscription {
-    const id = setTimeout(work, delay);
-    return {
-      unsubscribe: () => clearTimeout(id),
-      closed: false
-    };
-  }
-  
-  now(): number {
-    return Date.now();
-  }
-}
-
-class TestScheduler implements SchedulerLike {
-  private time = 0;
-  private tasks: Array<{ time: number; work: () => any }> = [];
-  
-  schedule<T>(work: () => T, delay: number = 0): Subscription {
-    this.tasks.push({ time: this.time + delay, work });
-    this.tasks.sort((a, b) => a.time - b.time);
+```mermaid
+graph TD
+    A[Subscription Management] --> B[Composite Subscription]
+    B --> C[Add/Remove Subscriptions]
+    C --> D[Automatic Cleanup]
     
-    return {
-      unsubscribe: () => {
-        const index = this.tasks.findIndex(task => task.work === work);
-        if (index !== -1) {
-          this.tasks.splice(index, 1);
-        }
-      },
-      closed: false
-    };
-  }
-  
-  tick(time: number = 1): void {
-    this.time += time;
-    while (this.tasks.length > 0 && this.tasks[0].time <= this.time) {
-      const task = this.tasks.shift()!;
-      task.work();
-    }
-  }
-  
-  now(): number {
-    return this.time;
-  }
-}
-
-// Observable creation with scheduler support
-function interval(period: number, scheduler: SchedulerLike = new AsyncScheduler()): Observable<number> {
-  return createObservable<number>(observer => {
-    let count = 0;
+    E[Component Lifecycle] --> F[Setup Subscriptions]
+    F --> G[Component Destroy]
+    G --> H[Dispose All]
     
-    const scheduleNext = () => {
-      return scheduler.schedule(() => {
-        observer.next(count++);
-        scheduleNext();
-      }, period);
-    };
+    I[WeakRef Cleanup] --> J[Garbage Collection]
+    J --> K[Periodic Cleanup]
+    K --> L[Memory Reclamation]
     
-    const subscription = scheduleNext();
-    return () => subscription.unsubscribe();
-  });
-}
+    style A fill:#99ccff,stroke:#333,color:#000
+    style E fill:#e8f5e8,stroke:#333,color:#000
+    style I fill:#ffcc99,stroke:#333,color:#000
+    style L fill:#99ff99,stroke:#333,color:#000
 ```
 
-#### 3. Memory Management and Resource Cleanup
 ```typescript
 // Resource management utilities
 class CompositeSubscription {
@@ -928,6 +890,30 @@ class WeakObservableManager {
 ### Performance Characteristics
 
 #### 1. Time Complexity Analysis
+
+```mermaid
+graph LR
+    A[Observable Creation] --> B[O(1)]
+    C[Subscription] --> D[O(1) per observer]
+    E[Operator Chaining] --> F[O(n) where n = operators]
+    G[Value Emission] --> H[O(m) where m = subscribers]
+    I[Complex Operators] --> J[O(k) where k = sources]
+    
+    subgraph "Complexity"
+        B
+        D
+        F
+        H
+        J
+    end
+    
+    style A fill:#fff3e0,stroke:#333,color:#000
+    style C fill:#99ccff,stroke:#333,color:#000
+    style E fill:#ffcc99,stroke:#333,color:#000
+    style G fill:#ff9999,stroke:#333,color:#000
+    style I fill:#99ff99,stroke:#333,color:#000
+```
+
 - **Observable creation**: O(1)
 - **Subscription**: O(1) per observer
 - **Operator chaining**: O(n) where n = number of operators
@@ -935,6 +921,23 @@ class WeakObservableManager {
 - **Complex operators (combineLatest, merge)**: O(k) where k = number of source observables
 
 #### 2. Memory Usage Patterns
+
+```mermaid
+graph TD
+    A[Memory-efficient Operators] --> B[scan Operator]
+    B --> C[Accumulator Pattern]
+    C --> D[Minimal Memory]
+    
+    E[Memory Leak Prevention] --> F[Leak-safe Observable]
+    F --> G[Proper Cleanup]
+    G --> H[Garbage Collection]
+    
+    style A fill:#99ccff,stroke:#333,color:#000
+    style E fill:#ffcc99,stroke:#333,color:#000
+    style D fill:#99ff99,stroke:#333,color:#000
+    style H fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 // Memory-efficient operator implementations
 function scan<T, R>(
@@ -1009,6 +1012,27 @@ function createLeakSafeObservable<T>(
 ### Error Handling Strategies
 
 #### 1. Comprehensive Error Recovery
+
+```mermaid
+graph TD
+    A[Global Error Handler] --> B[Error Subject]
+    B --> C[Error Logging]
+    C --> D[Error Recovery]
+    
+    E[Error Boundary Operator] --> F[catchAndLog]
+    F --> G[Fallback Values]
+    G --> H[Continue Stream]
+    
+    I[Smart Retry] --> J[Progressive Strategies]
+    J --> K[Exponential Backoff]
+    K --> L[Conditional Retry]
+    
+    style A fill:#99ccff,stroke:#333,color:#000
+    style E fill:#ffcc99,stroke:#333,color:#000
+    style I fill:#ff9999,stroke:#333,color:#000
+    style L fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 // Global error handler
 class GlobalErrorHandler {
@@ -1089,6 +1113,26 @@ function smartRetry<T>(
 ### Best Practices
 
 #### 1. Observable Design Patterns
+
+```mermaid
+graph TD
+    A[✅ Factory Pattern] --> B[Reusable Observables]
+    B --> C[Consistent API]
+    C --> D[Easy Testing]
+    
+    E[✅ Operator Composition] --> F[Reusable Operators]
+    F --> G[Functional Composition]
+    G --> H[Declarative Code]
+    
+    I[✅ State Management] --> J[Observable Store]
+    J --> K[Action Stream]
+    K --> L[State Reducer]
+    
+    style A fill:#99ff99,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
+    style I fill:#ffcc99,stroke:#333,color:#000
+```
+
 ```typescript
 // ✅ Factory pattern for reusable observables
 function createApiCall<T>(url: string, options?: RequestInit): Observable<T> {
@@ -1145,6 +1189,27 @@ function createStore<T>(
 ```
 
 #### 2. Performance Optimization
+
+```mermaid
+graph TD
+    A[✅ shareReplay] --> B[Expensive Operations]
+    B --> C[Cache Last Result]
+    C --> D[Future Subscribers]
+    
+    E[✅ Proper Cleanup] --> F[Component Lifecycle]
+    F --> G[Dispose Subscriptions]
+    G --> H[Memory Leak Prevention]
+    
+    I[✅ takeUntil] --> J[Avoid Memory Leaks]
+    J --> K[Automatic Unsubscription]
+    
+    style A fill:#99ccff,stroke:#333,color:#000
+    style E fill:#ffcc99,stroke:#333,color:#000
+    style I fill:#ff9999,stroke:#333,color:#000
+    style D fill:#99ff99,stroke:#333,color:#000
+    style H fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 // ✅ Use shareReplay for expensive operations
 const expensiveData$ = createApiCall('/expensive-endpoint').pipe(

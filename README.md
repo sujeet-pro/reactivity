@@ -2,6 +2,24 @@
 
 A comprehensive TypeScript library showcasing different reactive programming patterns and implementations. This library demonstrates four distinct approaches to reactivity: Signals, Proxy-based State, Pub-Sub, and RxJS-style Observables.
 
+## 📚 Navigation
+
+**📖 [Main Documentation](README.md)** (you are here)
+
+**🧠 Individual Pattern Documentation:**
+- **[Signals Implementation](library/signals/README.md)** - Fine-grained reactivity with automatic dependency tracking
+- **[Proxy State Implementation](library/proxy-state/README.md)** - Object mutation tracking using JavaScript Proxies
+- **[Pub-Sub Implementation](library/pub-sub/README.md)** - Event-driven architecture with publishers and subscribers
+- **[RxJS-style Implementation](library/rxjs-reactive/README.md)** - Observable streams with functional operators
+
+**🔗 Quick Links:**
+- [Examples](examples/) - Interactive examples and demos
+- [API Reference](library/) - Complete API documentation
+- [Tests](library/*/test.ts) - Test suites for each pattern
+- [Performance Benchmarks](library/benchmarks/) - Performance comparisons
+
+---
+
 ## 🚀 Features
 
 - **Signals**: Fine-grained reactivity with automatic dependency tracking (SolidJS-style)
@@ -23,10 +41,10 @@ graph TD
     C --> E[UI Update]
     C --> F[Side Effects]
     
-    style A fill:#ff9999
-    style D fill:#99ccff
-    style E fill:#99ff99
-    style F fill:#ffcc99
+    style A fill:#ff9999,stroke:#333,color:#000
+    style D fill:#99ccff,stroke:#333,color:#000
+    style E fill:#99ff99,stroke:#333,color:#000
+    style F fill:#ffcc99,stroke:#333,color:#000
 ```
 
 ### The Four Patterns
@@ -40,11 +58,17 @@ graph LR
     E[Pub-Sub] --> F[Event-driven<br/>Communication]
     G[RxJS-style] --> H[Stream-based<br/>Data Flow]
     
-    style A fill:#e1f5fe
-    style C fill:#f3e5f5
-    style E fill:#e8f5e8
-    style G fill:#fff3e0
+    style A fill:#e1f5fe,stroke:#333,color:#000
+    style C fill:#f3e5f5,stroke:#333,color:#000
+    style E fill:#e8f5e8,stroke:#333,color:#000
+    style G fill:#fff3e0,stroke:#333,color:#000
 ```
+
+**🔗 Learn more about each pattern:**
+- **[Signals](library/signals/README.md)** - Perfect for UI frameworks and real-time dashboards
+- **[Proxy State](library/proxy-state/README.md)** - Ideal for complex forms and state trees
+- **[Pub-Sub](library/pub-sub/README.md)** - Great for event-driven architectures and cross-component communication
+- **[RxJS-style](library/rxjs-reactive/README.md)** - Excellent for complex async flows and data transformation pipelines
 
 ## 📁 Project Structure
 
@@ -169,6 +193,8 @@ npm run dev:library
 
 Signals provide fine-grained reactivity with automatic dependency tracking. They're perfect for UI frameworks and real-time data synchronization.
 
+**🔗 [Detailed Signals Documentation](library/signals/README.md)**
+
 #### How Signals Work
 
 ```mermaid
@@ -182,9 +208,9 @@ graph TD
     G --> H[Effect Re-runs]
     H --> I[Update Dependencies]
     
-    style A fill:#e1f5fe
-    style F fill:#ff9999
-    style H fill:#99ccff
+    style A fill:#e1f5fe,stroke:#333,color:#000
+    style F fill:#ff9999,stroke:#333,color:#000
+    style H fill:#99ccff,stroke:#333,color:#000
 ```
 
 #### Core Implementation
@@ -239,6 +265,8 @@ sequenceDiagram
 
 Proxy State provides transparent reactivity for objects using JavaScript Proxies. It's ideal for complex form management and hierarchical state trees.
 
+**🔗 [Detailed Proxy State Documentation](library/proxy-state/README.md)**
+
 #### How Proxy State Works
 
 ```mermaid
@@ -253,9 +281,9 @@ graph TD
     G --> H[Nested Objects Proxied]
     H --> I[Path-based Notifications]
     
-    style A fill:#f3e5f5
-    style D fill:#ff9999
-    style I fill:#99ccff
+    style A fill:#f3e5f5,stroke:#333,color:#000
+    style D fill:#ff9999,stroke:#333,color:#000
+    style I fill:#99ccff,stroke:#333,color:#000
 ```
 
 #### Core Implementation
@@ -325,6 +353,8 @@ sequenceDiagram
 
 Pub-Sub provides event-driven communication between decoupled components. It's perfect for cross-component messaging and real-time data synchronization.
 
+**🔗 [Detailed Pub-Sub Documentation](library/pub-sub/README.md)**
+
 #### How Pub-Sub Works
 
 ```mermaid
@@ -340,9 +370,9 @@ graph TD
     H --> I[Multiple Channels]
     I --> J[Global Listeners]
     
-    style A fill:#e8f5e8
-    style B fill:#ff9999
-    style D fill:#99ccff
+    style A fill:#e8f5e8,stroke:#333,color:#000
+    style B fill:#ff9999,stroke:#333,color:#000
+    style D fill:#99ccff,stroke:#333,color:#000
 ```
 
 #### Core Implementation
@@ -412,14 +442,16 @@ graph LR
         H --> K[Global Listeners]
     end
     
-    style A fill:#e8f5e8
-    style C fill:#ff9999
-    style E fill:#99ccff
+    style A fill:#e8f5e8,stroke:#333,color:#000
+    style C fill:#ff9999,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
 ```
 
 ### RxJS-style
 
 RxJS-style provides functional reactive programming with observable streams and operators. It excels at complex async flows and data transformation pipelines.
+
+**🔗 [Detailed RxJS-style Documentation](library/rxjs-reactive/README.md)**
 
 #### How RxJS-style Works
 
@@ -436,9 +468,9 @@ graph TD
     H --> I[Multiple Subscribers]
     I --> J[Shared Execution]
     
-    style A fill:#fff3e0
-    style D fill:#ff9999
-    style E fill:#99ccff
+    style A fill:#fff3e0,stroke:#333,color:#000
+    style D fill:#ff9999,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
 ```
 
 #### Core Implementation
@@ -515,6 +547,8 @@ sequenceDiagram
 
 ### Signals Implementation
 
+**🔗 [Full Signals Implementation Details](library/signals/README.md#implementation-details)**
+
 #### Dependency Tracking System
 
 ```mermaid
@@ -531,9 +565,9 @@ graph TD
     J --> K[Clean Previous Dependencies]
     K --> L[Establish New Dependencies]
     
-    style A fill:#e1f5fe
-    style H fill:#ff9999
-    style J fill:#99ccff
+    style A fill:#e1f5fe,stroke:#333,color:#000
+    style H fill:#ff9999,stroke:#333,color:#000
+    style J fill:#99ccff,stroke:#333,color:#000
 ```
 
 #### Memory Management
@@ -548,11 +582,13 @@ graph LR
     F[Effect Disposal] --> G[Remove from Sets]
     G --> H[Garbage Collection]
     
-    style F fill:#ff9999
-    style H fill:#99ff99
+    style F fill:#ff9999,stroke:#333,color:#000
+    style H fill:#99ff99,stroke:#333,color:#000
 ```
 
 ### Proxy State Implementation
+
+**🔗 [Full Proxy State Implementation Details](library/proxy-state/README.md#implementation-details)**
 
 #### Proxy Trap Architecture
 
@@ -569,9 +605,9 @@ graph TD
     I --> J[Notify Listeners]
     J --> K[Update Metadata]
     
-    style A fill:#f3e5f5
-    style G fill:#ff9999
-    style J fill:#99ccff
+    style A fill:#f3e5f5,stroke:#333,color:#000
+    style G fill:#ff9999,stroke:#333,color:#000
+    style J fill:#99ccff,stroke:#333,color:#000
 ```
 
 #### Batching System
@@ -594,6 +630,8 @@ sequenceDiagram
 
 ### Pub-Sub Implementation
 
+**🔗 [Full Pub-Sub Implementation Details](library/pub-sub/README.md#implementation-details)**
+
 #### Event Flow Architecture
 
 ```mermaid
@@ -610,9 +648,9 @@ graph TD
     J --> K[Execute Handlers]
     K --> L[Error Isolation]
     
-    style H fill:#e8f5e8
-    style I fill:#ff9999
-    style K fill:#99ccff
+    style H fill:#e8f5e8,stroke:#333,color:#000
+    style I fill:#ff9999,stroke:#333,color:#000
+    style K fill:#99ccff,stroke:#333,color:#000
 ```
 
 #### Channel and Hub Management
@@ -640,12 +678,14 @@ graph LR
     A --> I
     A --> J
     
-    style A fill:#e8f5e8
-    style F fill:#99ccff
-    style I fill:#ffcc99
+    style A fill:#e8f5e8,stroke:#333,color:#000
+    style F fill:#99ccff,stroke:#333,color:#000
+    style I fill:#ffcc99,stroke:#333,color:#000
 ```
 
 ### RxJS-style Implementation
+
+**🔗 [Full RxJS-style Implementation Details](library/rxjs-reactive/README.md#implementation-details)**
 
 #### Observable Chain Architecture
 
@@ -665,9 +705,9 @@ graph TD
     L --> M[New Subscribers]
     M --> N[Immediate Emission]
     
-    style A fill:#fff3e0
-    style F fill:#ff9999
-    style K fill:#99ccff
+    style A fill:#fff3e0,stroke:#333,color:#000
+    style F fill:#ff9999,stroke:#333,color:#000
+    style K fill:#99ccff,stroke:#333,color:#000
 ```
 
 #### Operator Implementation Flow
@@ -727,6 +767,8 @@ The library includes comprehensive tests using Vitest:
 - Equality checking for optimization
 - Resource handling for async operations
 
+**🔗 [Complete Signals Documentation](library/signals/README.md)**
+
 ### Proxy State  
 - Deep reactivity using JavaScript Proxies
 - Path-based change notifications with full path tracking
@@ -734,6 +776,8 @@ The library includes comprehensive tests using Vitest:
 - Computed states that automatically update
 - Batching support for performance optimization
 - Immutable update patterns with updateProxyState
+
+**🔗 [Complete Proxy State Documentation](library/proxy-state/README.md)**
 
 ### Pub-Sub
 - Type-safe event emitters with strong typing
@@ -744,6 +788,8 @@ The library includes comprehensive tests using Vitest:
 - Hub pattern for managing multiple channels
 - State combination utilities
 
+**🔗 [Complete Pub-Sub Documentation](library/pub-sub/README.md)**
+
 ### RxJS-style
 - Full operator support (map, filter, debounce, take, etc.)
 - Subject and BehaviorSubject implementations
@@ -751,6 +797,8 @@ The library includes comprehensive tests using Vitest:
 - Subscription management with automatic cleanup
 - Error handling with retry logic
 - Backpressure handling for high-frequency events
+
+**🔗 [Complete RxJS-style Documentation](library/rxjs-reactive/README.md)**
 
 ## 🚀 Performance Best Practices
 
@@ -835,3 +883,11 @@ This project is licensed under the ISC License - see the [LICENSE](LICENSE) file
 - [GitHub Repository](https://github.com/sujeet-pro/reactivity)
 - [Live Examples](https://projects.sujeet.pro/reactivity/)
 - [Documentation](https://github.com/sujeet-pro/reactivity#readme)
+
+---
+
+**📚 Navigation:**
+- **[Signals Implementation](library/signals/README.md)** - Fine-grained reactivity with automatic dependency tracking
+- **[Proxy State Implementation](library/proxy-state/README.md)** - Object mutation tracking using JavaScript Proxies
+- **[Pub-Sub Implementation](library/pub-sub/README.md)** - Event-driven architecture with publishers and subscribers
+- **[RxJS-style Implementation](library/rxjs-reactive/README.md)** - Observable streams with functional operators

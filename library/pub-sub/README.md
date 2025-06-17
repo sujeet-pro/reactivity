@@ -11,6 +11,27 @@ The Publish-Subscribe pattern represents a **decoupled communication paradigm** 
 
 This approach promotes the **separation of concerns** by allowing components to focus on their primary responsibilities while communicating through a well-defined event interface. It's particularly powerful for building modular, extensible systems.
 
+### Pub-Sub Architecture Overview
+
+```mermaid
+graph TD
+    A[Publisher] --> B[Event Emitter]
+    B --> C[Event Channel]
+    C --> D[Subscribers]
+    D --> E[Handler Execution]
+    E --> F[UI Updates]
+    E --> G[Side Effects]
+    
+    B --> H[Hub Management]
+    H --> I[Multiple Channels]
+    I --> J[Global Listeners]
+    
+    style A fill:#e8f5e8,stroke:#333,color:#000
+    style B fill:#ff9999,stroke:#333,color:#000
+    style D fill:#99ccff,stroke:#333,color:#000
+    style F fill:#99ff99,stroke:#333,color:#000
+```
+
 ## 🎯 Use Cases
 
 ### When to Choose Pub-Sub
@@ -28,6 +49,37 @@ This approach promotes the **separation of concerns** by allowing components to 
 - **Synchronous Operations**: When you need immediate return values
 - **Simple State Management**: Signals or proxy state might be more appropriate
 - **Performance-Critical Paths**: Direct calls have less overhead
+
+### Pub-Sub Usage Patterns
+
+```mermaid
+graph LR
+    subgraph "Event Emitter"
+        A[createEventEmitter] --> B[Type-safe Events]
+        B --> C[on/emit Methods]
+        C --> D[Error Handling]
+    end
+    
+    subgraph "Reactive State"
+        E[createReactiveState] --> F[State Management]
+        F --> G[Subscribe/Set]
+    end
+    
+    subgraph "Channels"
+        H[createChannel] --> I[Namespaced Events]
+        I --> J[Publish/Subscribe]
+    end
+    
+    subgraph "Hub"
+        K[createPubSubHub] --> L[Multi-channel Management]
+        L --> M[Global Listeners]
+    end
+    
+    style A fill:#e8f5e8,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
+    style H fill:#ffcc99,stroke:#333,color:#000
+    style K fill:#99ff99,stroke:#333,color:#000
+```
 
 ### Specific Use Case Examples
 
@@ -258,6 +310,30 @@ class EmailStepHandler {
 ### Core Architecture
 
 #### 1. Event Emitter Implementation
+
+```mermaid
+graph TD
+    A[Event Emitter Creation] --> B[Event Map Storage]
+    B --> C[Listener Sets]
+    C --> D[Options Map]
+    D --> E[on Method]
+    E --> F[emit Method]
+    
+    G[Event Subscription] --> H[Add to Listener Set]
+    H --> I[Store Options]
+    I --> J[Return Unsubscriber]
+    
+    K[Event Emission] --> L[Find Event Listeners]
+    L --> M[Execute Handlers]
+    M --> N[Handle Once Listeners]
+    N --> O[Error Isolation]
+    
+    style A fill:#e8f5e8,stroke:#333,color:#000
+    style G fill:#99ccff,stroke:#333,color:#000
+    style K fill:#ff9999,stroke:#333,color:#000
+    style O fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 export function createEventEmitter<TEvents extends Record<string, any>>(): EventEmitter<TEvents> {
   const listeners = new Map<keyof TEvents, Set<EventHandler<any>>>();
@@ -337,6 +413,28 @@ export function createEventEmitter<TEvents extends Record<string, any>>(): Event
 - **Async support**: Non-blocking execution for async handlers
 
 #### 2. Channel Implementation
+
+```mermaid
+graph TD
+    A[Channel Creation] --> B[Event Emitter]
+    B --> C[Subscriber Map]
+    C --> D[subscribe Method]
+    D --> E[publish Method]
+    E --> F[getSubscriberCount]
+    
+    G[Event Subscription] --> H[Add to Subscriber Set]
+    H --> I[Subscribe to Emitter]
+    I --> J[Return Unsubscriber]
+    
+    K[Event Publishing] --> L[Emit to Channel]
+    L --> M[Notify All Subscribers]
+    
+    style A fill:#ffcc99,stroke:#333,color:#000
+    style G fill:#99ccff,stroke:#333,color:#000
+    style K fill:#ff9999,stroke:#333,color:#000
+    style M fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 export function createChannel<TEvents extends Record<string, any>>(): PubSubChannel<TEvents> {
   const emitter = createEventEmitter<TEvents>();
@@ -388,6 +486,28 @@ export function createChannel<TEvents extends Record<string, any>>(): PubSubChan
 ```
 
 #### 3. Hub Implementation (Multi-Channel Management)
+
+```mermaid
+graph TD
+    A[Hub Creation] --> B[Channel Map]
+    B --> C[Global Listeners]
+    C --> D[channel Method]
+    D --> E[addGlobalListener]
+    E --> F[getChannelNames]
+    
+    G[Channel Access] --> H[Get or Create Channel]
+    H --> I[Wrap Publish Method]
+    I --> J[Notify Global Listeners]
+    
+    K[Global Listener] --> L[Monitor All Channels]
+    L --> M[Cross-channel Coordination]
+    
+    style A fill:#99ff99,stroke:#333,color:#000
+    style G fill:#99ccff,stroke:#333,color:#000
+    style K fill:#ffcc99,stroke:#333,color:#000
+    style M fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 export function createPubSubHub(): PubSubHub {
   const channels = new Map<string, PubSubChannel<any>>();
@@ -439,6 +559,29 @@ export function createPubSubHub(): PubSubHub {
 ```
 
 #### 4. Reactive State Implementation
+
+```mermaid
+graph TD
+    A[State Creation] --> B[Initial Value]
+    B --> C[Listener Set]
+    C --> D[get Method]
+    D --> E[set Method]
+    E --> F[subscribe Method]
+    
+    G[State Update] --> H[Compare Values]
+    H --> I[Update Value]
+    I --> J[Notify Listeners]
+    
+    K[State Subscription] --> L[Add Listener]
+    L --> M[Immediate Notification]
+    M --> N[Return Unsubscriber]
+    
+    style A fill:#99ccff,stroke:#333,color:#000
+    style G fill:#ff9999,stroke:#333,color:#000
+    style K fill:#99ccff,stroke:#333,color:#000
+    style J fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 export function createReactiveState<T>(initialValue: T): ReactiveState<T> {
   let currentValue = initialValue;
@@ -481,6 +624,25 @@ export function createReactiveState<T>(initialValue: T): ReactiveState<T> {
 ```
 
 #### 5. State Combination Utilities
+
+```mermaid
+graph TD
+    A[Multiple States] --> B[combineStates]
+    B --> C[Subscribe to All States]
+    C --> D[Track Individual Changes]
+    D --> E[Compute Combined Value]
+    E --> F[Notify Combined Listeners]
+    
+    G[State Change] --> H[Recompute Combined]
+    H --> I[Check for Changes]
+    I --> J[Update Combined State]
+    
+    style A fill:#e8f5e8,stroke:#333,color:#000
+    style B fill:#99ccff,stroke:#333,color:#000
+    style G fill:#ff9999,stroke:#333,color:#000
+    style J fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 export function combineStates<T extends Record<string, ReactiveState<any>>>(
   states: T
@@ -546,6 +708,25 @@ export function combineStates<T extends Record<string, ReactiveState<any>>>(
 ### Advanced Features
 
 #### 1. Event Filtering and Transformation
+
+```mermaid
+graph TD
+    A[Source Channel] --> B[Filtered Channel]
+    B --> C[Condition Check]
+    C --> D[Transform Data]
+    D --> E[Publish Filtered]
+    
+    F[Event Data] --> G{Filter Condition}
+    G -->|Pass| H[Apply Transform]
+    G -->|Fail| I[Skip Event]
+    H --> J[Publish to Filtered Channel]
+    
+    style A fill:#e8f5e8,stroke:#333,color:#000
+    style B fill:#99ccff,stroke:#333,color:#000
+    style F fill:#ff9999,stroke:#333,color:#000
+    style J fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 interface EventFilter<T> {
   condition: (data: T) => boolean;
@@ -589,6 +770,25 @@ const adminUserEvents = createFilteredChannel(allUserEvents, {
 ```
 
 #### 2. Event Debouncing and Throttling
+
+```mermaid
+graph TD
+    A[Event Stream] --> B[Debounced Emitter]
+    B --> C[Timeout Management]
+    C --> D[Clear Previous Timeout]
+    D --> E[Set New Timeout]
+    E --> F[Emit After Delay]
+    
+    G[High Frequency Events] --> H[Throttle]
+    H --> I[Rate Limiting]
+    I --> J[Controlled Emission]
+    
+    style A fill:#e8f5e8,stroke:#333,color:#000
+    style B fill:#ffcc99,stroke:#333,color:#000
+    style G fill:#ff9999,stroke:#333,color:#000
+    style J fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 function createDebouncedEmitter<TEvents extends Record<string, any>>(
   emitter: EventEmitter<TEvents>,
@@ -624,6 +824,23 @@ function createDebouncedEmitter<TEvents extends Record<string, any>>(
 ```
 
 #### 3. Event Replay and History
+
+```mermaid
+graph TD
+    A[Event Recorder] --> B[History Storage]
+    B --> C[Event Capture]
+    C --> D[Timestamp Tracking]
+    D --> E[Max History Size]
+    
+    F[Replay Request] --> G[Filter by Time]
+    G --> H[Replay Events]
+    H --> I[Restore State]
+    
+    style A fill:#99ccff,stroke:#333,color:#000
+    style F fill:#ff9999,stroke:#333,color:#000
+    style I fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 class EventRecorder<TEvents extends Record<string, any>> {
   private history: Array<{
@@ -680,18 +897,72 @@ class EventRecorder<TEvents extends Record<string, any>> {
 ### Performance Characteristics
 
 #### 1. Time Complexity
+
+```mermaid
+graph LR
+    A[Event Emission] --> B[O(n) where n = subscribers]
+    C[Subscription] --> D[O(1)]
+    E[Channel Operations] --> F[O(1)]
+    G[Hub Operations] --> H[O(1) + channel cost]
+    
+    subgraph "Complexity"
+        B
+        D
+        F
+        H
+    end
+    
+    style A fill:#ff9999,stroke:#333,color:#000
+    style C fill:#99ccff,stroke:#333,color:#000
+    style E fill:#ffcc99,stroke:#333,color:#000
+    style G fill:#99ff99,stroke:#333,color:#000
+```
+
 - **Event emission**: O(n) where n = number of subscribers for that event
 - **Subscription**: O(1) for adding/removing listeners
 - **Channel operations**: O(1) for publish/subscribe
 - **Hub operations**: O(1) for channel lookup + channel operation cost
 
 #### 2. Memory Usage
+
+```mermaid
+graph TD
+    A[Event Emitter] --> B[~50 bytes + listener storage]
+    C[Channel] --> D[Event emitter overhead + subscriber tracking]
+    E[Hub] --> F[Map storage + all managed channels]
+    G[State] --> H[~100 bytes + value storage + listener set]
+    
+    style A fill:#e8f5e8,stroke:#333,color:#000
+    style C fill:#ffcc99,stroke:#333,color:#000
+    style E fill:#99ff99,stroke:#333,color:#000
+    style G fill:#99ccff,stroke:#333,color:#000
+```
+
 - **Event emitter**: ~50 bytes + listener storage
 - **Channel**: Event emitter overhead + subscriber tracking
 - **Hub**: Map storage + all managed channels
 - **State**: ~100 bytes + value storage + listener set
 
 #### 3. Scalability Patterns
+
+```mermaid
+graph TD
+    A[High Volume Events] --> B[Partitioned Pub-Sub]
+    B --> C[Hash-based Partitioning]
+    C --> D[Load Distribution]
+    D --> E[Improved Performance]
+    
+    F[Memory Management] --> G[WeakRef-based Cleanup]
+    G --> H[Periodic Cleanup]
+    H --> I[Garbage Collection]
+    
+    style A fill:#ff9999,stroke:#333,color:#000
+    style B fill:#99ccff,stroke:#333,color:#000
+    style F fill:#ffcc99,stroke:#333,color:#000
+    style E fill:#99ff99,stroke:#333,color:#000
+    style I fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 // Partitioned pub-sub for high-volume events
 class PartitionedPubSub<T> {
@@ -719,6 +990,22 @@ class PartitionedPubSub<T> {
 ### Memory Management
 
 #### 1. Automatic Cleanup
+
+```mermaid
+graph TD
+    A[WeakRef-based Listeners] --> B[Garbage Collection]
+    B --> C[Automatic Cleanup]
+    
+    D[Subscription Lifecycle] --> E[Add to Manager]
+    E --> F[Dispose All]
+    F --> G[Memory Reclamation]
+    
+    style A fill:#e8f5e8,stroke:#333,color:#000
+    style D fill:#99ccff,stroke:#333,color:#000
+    style C fill:#99ff99,stroke:#333,color:#000
+    style G fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 // WeakRef-based listener cleanup for garbage-collected objects
 class WeakEventEmitter<TEvents extends Record<string, any>> {
@@ -754,6 +1041,22 @@ class WeakEventEmitter<TEvents extends Record<string, any>> {
 ```
 
 #### 2. Subscription Lifecycle Management
+
+```mermaid
+graph TD
+    A[Component Creation] --> B[Setup Subscriptions]
+    B --> C[Add to Manager]
+    C --> D[Component Lifecycle]
+    D --> E[Component Destruction]
+    E --> F[Dispose All Subscriptions]
+    F --> G[Memory Cleanup]
+    
+    style A fill:#e8f5e8,stroke:#333,color:#000
+    style B fill:#99ccff,stroke:#333,color:#000
+    style E fill:#ff9999,stroke:#333,color:#000
+    style G fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 class SubscriptionManager {
   private subscriptions = new Set<() => void>();
@@ -787,6 +1090,25 @@ class SubscriptionManager {
 ### Best Practices
 
 #### 1. Event Design Patterns
+
+```mermaid
+graph TD
+    A[✅ Structured Naming] --> B[Namespace:Action]
+    B --> C[Consistent Patterns]
+    C --> D[Easy to Filter]
+    
+    E[✅ Typed Payloads] --> F[Strong Typing]
+    F --> G[Type Safety]
+    G --> H[Better IDE Support]
+    
+    I[✅ Error Events] --> J[Structured Error Handling]
+    J --> K[Error Recovery]
+    
+    style A fill:#99ff99,stroke:#333,color:#000
+    style E fill:#99ccff,stroke:#333,color:#000
+    style I fill:#ffcc99,stroke:#333,color:#000
+```
+
 ```typescript
 // ✅ Structured event naming
 interface UserEvents {
@@ -815,6 +1137,22 @@ interface ErrorEvents {
 ```
 
 #### 2. Subscription Management
+
+```mermaid
+graph TD
+    A[Component Setup] --> B[Create Manager]
+    B --> C[Add Subscriptions]
+    C --> D[Component Lifecycle]
+    D --> E[Component Destroy]
+    E --> F[Dispose Manager]
+    F --> G[Clean Memory]
+    
+    style A fill:#e8f5e8,stroke:#333,color:#000
+    style C fill:#99ccff,stroke:#333,color:#000
+    style E fill:#ff9999,stroke:#333,color:#000
+    style G fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 // ✅ Component-based subscription management
 class ComponentSubscriptions {
@@ -836,6 +1174,26 @@ class ComponentSubscriptions {
 ```
 
 #### 3. Error Handling Strategies
+
+```mermaid
+graph TD
+    A[Event Emission] --> B[Try Block]
+    B --> C[Execute Handler]
+    C --> D[Success Path]
+    
+    B --> E[Catch Block]
+    E --> F[Error Handler]
+    F --> G[Continue Other Handlers]
+    
+    H[Global Error Handler] --> I[Centralized Error Management]
+    I --> J[Error Recovery]
+    
+    style A fill:#ffcc99,stroke:#333,color:#000
+    style E fill:#ff9999,stroke:#333,color:#000
+    style H fill:#99ccff,stroke:#333,color:#000
+    style G fill:#99ff99,stroke:#333,color:#000
+```
+
 ```typescript
 // ✅ Comprehensive error handling
 class RobustEventEmitter<T extends Record<string, any>> {
@@ -865,4 +1223,4 @@ class RobustEventEmitter<T extends Record<string, any>> {
 }
 ```
 
-This pub-sub implementation provides a robust foundation for building event-driven architectures with excellent type safety, performance characteristics, and developer experience. 
+This pub-sub implementation provides a robust foundation for building event-driven architectures with excellent type safety, performance characteristics, and developer experience.
